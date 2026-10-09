@@ -24,7 +24,8 @@ research implementation. MetaDE sources are retained for future research.
 
 The first inner run completed **3 generations × 2 main candidates** with all four
 operators observed. Across the bounded acceptance, **17 model requests** consumed
-**81,717 tokens** and produced **7 scored sandbox jobs**. The run was stopped when
+**81,717 tokens** and produced **7 sandbox jobs**: **6 scored successfully and 1
+failed during code execution**. The run was stopped when
 the remaining request budget could no longer cover the minimum outer population.
 The default deployment switch was not performed. One interrupted, unscored debug
 node also has an incomplete journal artifact and is explicitly excluded from

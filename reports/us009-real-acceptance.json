@@ -3,9 +3,11 @@
     "actual_sandbox_jobs": 7,
     "complete_inner_runs": 1,
     "debug_calls": 8,
+    "execution_failed_jobs": 1,
     "main_operator_calls": 9,
     "partial_inner_runs_with_model_calls": 1,
     "runs_refused_without_model_calls": 2,
+    "successfully_scored_jobs": 6,
     "verified_cache_hits": 1
   },
   "budget": {
@@ -655,7 +657,7 @@
     "node_id": "f90d95cb0917421d8e949abd573e5aff",
     "reason": "Graceful interrupt occurred after the final debug trace but before the node entered the journal. Its request usage is settled, but this unscored node has no complete code artifact and is not accepted or cached.",
     "run": "cfg1",
-    "verified_scored_jobs": 7
+    "verified_scored_jobs": 6
   },
   "next_steps_require_new_user_direction": [
     "Do not resume or reset the stopped ledger.",
@@ -693,6 +695,15 @@
     "unchanged_baseline_failure": "test_gym_package_paths::test_same_parquet_is_consumed_by_existing_sft_builder (missing prior SFT build_tasks.py)"
   },
   "reason": "remaining_request_budget_cannot_cover_minimum_outer_population",
+  "report_correction": {
+    "actual_jobs": 7,
+    "date": "2026-10-09",
+    "execution_failed_jobs": 1,
+    "failed_job_id": "job_1f939beabcc44468",
+    "raw_runtime_artifacts_modified": false,
+    "reason": "Source identity and cleanup verification do not imply a successful score.",
+    "successfully_scored_jobs": 6
+  },
   "runner_commit": "b388399e63512418a0d7821d8879de0a933bb482",
   "runtime_evidence_sha256": {
     ".runtime/acceptance-us009/acceptance-summary.json": "05ab1ec5f5afe66f13b1ab5be6f7974c463510d64c1090633a841f761ef83644",
