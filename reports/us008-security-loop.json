@@ -1,0 +1,141 @@
+{
+  "gateway": "http://127.0.0.1:6581",
+  "generated_at": "2026-10-08T14:59:19Z",
+  "probes": [
+    {
+      "completed_at": "2026-10-08T14:57:52.432042Z",
+      "detail": "job=job_3c2f3bb62cba4d4f states=queued->completed score=0.45 started_at=2026-10-08T14:57:52.247734Z",
+      "evaluation": {
+        "answer_sha256": "f25ab07cfc53a420662e3ef899df728de124136c70277b66236ca06f08638579",
+        "direction": "maximize",
+        "evaluator": "external_trusted",
+        "metric": "accuracy",
+        "prediction_sha256": "8fd6b39986cef32240138cbc355f648abcb2cb53a2950f95345d37a683f190dd",
+        "prediction_snapshot": "/mnt/rsi_storage/mlsandbox/jobs/2026-10-08/hello_synth/job_3c2f3bb62cba4d4f/prediction_snapshot.csv",
+        "registry_version": "evaluator-registry.v1",
+        "row_count": 40,
+        "score": 0.45,
+        "split": "test",
+        "task_id": "hello_synth"
+      },
+      "job_id": "job_3c2f3bb62cba4d4f",
+      "name": "benign data-driven fixture scored by external evaluator",
+      "ok": true,
+      "score": 0.45,
+      "source_identity_verified": true,
+      "started_at": "2026-10-08T14:57:52.247734Z",
+      "states": [
+        "queued",
+        "completed"
+      ],
+      "worker_cleanup_verified": true
+    },
+    {
+      "detail": "http=422 detail={\"detail\": {\"error\": \"source_gate_denied\", \"gate\": {\"allowed\": false, \"policy_version\": \"source-gate.v2\", \"policy_sha256\": \"967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e\", \"source_s",
+      "http_status": 422,
+      "name": "admission-denied source rejected with machine-readable reason (no execution)",
+      "ok": true,
+      "response": {
+        "detail": {
+          "error": "source_gate_denied",
+          "gate": {
+            "allowed": false,
+            "check_kind": "static_admission_filter",
+            "denials": [
+              {
+                "reason": "forbidden_marker:read_and_metric",
+                "rule": "denied_marker"
+              },
+              {
+                "reason": "forbidden_marker:/evaluation/",
+                "rule": "denied_marker"
+              }
+            ],
+            "policy_sha256": "967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e",
+            "policy_version": "source-gate.v2",
+            "security_boundary": false,
+            "source_sha256": "13f549515078c6e4c3b3da6a12862c97bfbb229bd2b583d616eaceaad19b670b"
+          }
+        }
+      }
+    },
+    {
+      "detail": "probes={\"chmod\": \"denied:1\", \"listdir_parent\": \"denied:13\", \"read\": \"denied:13\", \"setxattr\": \"denied:1\", \"utime\": \"denied:1\", \"write\": \"denied:13\", \"write_via_symlink\": \"denied:13\"} content_ok=True mode_ok=True",
+      "job_id": "job_44f5a7d647d24b2a",
+      "name": "cross-job canary: read/write/chmod/utime/symlink-alias all denied; content+mode intact",
+      "ok": true,
+      "probe_results": {
+        "chmod": "denied:1",
+        "listdir_parent": "denied:13",
+        "read": "denied:13",
+        "setxattr": "denied:1",
+        "utime": "denied:1",
+        "write": "denied:13",
+        "write_via_symlink": "denied:13"
+      },
+      "score": 0.55
+    },
+    {
+      "detail": "probes={\"answer_file\": \"denied:2\", \"control_key_open\": \"denied:13\", \"evaluator_tree\": \"denied:2\", \"no_default_route\": \"REACHED\", \"only_lo_eth0\": \"REACHED\", \"registry_file\": \"denied:2\", \"supervisor_environ_open\": \"denied:13\"}",
+      "job_id": "job_a5214792157c43db",
+      "name": "candidate cannot reach answers/metric/control key/supervisor environ/network",
+      "ok": true,
+      "probe_results": {
+        "answer_file": "denied:2",
+        "control_key_open": "denied:13",
+        "evaluator_tree": "denied:2",
+        "no_default_route": "REACHED",
+        "only_lo_eth0": "REACHED",
+        "registry_file": "denied:2",
+        "supervisor_environ_open": "denied:13"
+      }
+    },
+    {
+      "detail": "job=job_48febd3f3fd74d44 status=failed result=scoring_failed",
+      "job_id": "job_48febd3f3fd74d44",
+      "name": "symlink submission rejected with machine-readable scoring failure",
+      "ok": true,
+      "result_kind": "scoring_failed"
+    },
+    {
+      "detail": "job=job_a150d00a855242a2 status=failed result=scoring_failed",
+      "job_id": "job_a150d00a855242a2",
+      "name": "oversized submission rejected with machine-readable scoring failure",
+      "ok": true,
+      "result_kind": "scoring_failed"
+    },
+    {
+      "child_started": true,
+      "detail": "job=job_02d08c7e41c34815 status=failed result=timeout cleanup_verified=True child_started=True marker_absent=True",
+      "job_id": "job_02d08c7e41c34815",
+      "name": "timeout kills detached descendants; cleanup worker-verified",
+      "ok": true,
+      "result_kind": "timeout",
+      "worker_cleanup_verified": true
+    },
+    {
+      "cleanup_confirmed": true,
+      "detail": "job=job_d5f567b96f154431 confirmed=True",
+      "job_id": "job_d5f567b96f154431",
+      "name": "cancel confirms ONLY via worker_cleanup_verified acknowledgement",
+      "ok": true
+    },
+    {
+      "child_started": true,
+      "detail": "job=job_d5f567b96f154431 child_started=True marker_absent=True started_retained=True",
+      "job_id": "job_d5f567b96f154431",
+      "marker_absent": true,
+      "name": "cancel kills detached descendants (child started before DELETE)",
+      "ok": true
+    },
+    {
+      "detail": "job=job_7e6555e791f24369 states=queued->completed score=0.45",
+      "job_id": "job_7e6555e791f24369",
+      "name": "next benign job scores after timeout/cancel probes",
+      "ok": true,
+      "score": 0.45
+    }
+  ],
+  "story": "US-008",
+  "verdict": "PASS"
+}

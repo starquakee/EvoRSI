@@ -1,0 +1,7 @@
+# Trusted evaluator dependency pin (US-005).
+# The evaluator core (research/evaluator/) is Python-standard-library ONLY:
+# csv, hashlib, io, json, os, stat, dataclasses, pathlib, typing.
+# No third-party packages are required or permitted at scoring time;
+# the trusted metric code and answers never ship with model credentials.
+# Runtime pin: CPython 3.11+ (matches the worker/compatibility evidence;
+# the container image digest is pinned at deploy time in US-006).

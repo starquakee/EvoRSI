@@ -1,0 +1,53 @@
+{
+  "schema": "search-integration-validation.v1",
+  "status": "offline_pass",
+  "base_commit": "b78ad245cb3346b1f947e21c3dfcbcaad371ac36",
+  "source_sha256": {
+    "OpenMLE-Evo/third_party/aira-evo/src/dojo/core/solvers/llm_helpers/backends/lite_llm.py": "1b545de74b2bc3ba1d0e404766c7e779e816425085d5518730efdbd6af590857",
+    "OpenMLE-Evo/third_party/aira-evo/src/dojo/core/solvers/llm_helpers/backends/open_ai.py": "72912f4dbed86aea681c4bb2a71c5940b372dffe755e376a491a401c1952158b",
+    "OpenMLE-Evo/third_party/aira-evo/src/dojo/solvers/evo/evo.py": "59bb0a46b08e0365b21c261be497752abb29306b241fc3ed2f3a4a15d033dcdf",
+    "OpenMLE-Evo/tts_search/configs/experiment/trustworthy_validation.yaml": "f18708a1c67231a21a44f7417ee99da954dd81776b1f62191269615ffcb87f2f",
+    "OpenMLE-Evo/tts_search/configs/litellm/trustworthy_kimi.yaml": "417106af92c5e7708d8b53b5c1be64abe3e28d1a8b7218254fd1a7430154aa97",
+    "OpenMLE-Evo/tts_search/reward_func_utils.py": "a3620a64b34e549ede3ab683d444d7de636c4cde18e38a9f34a67bddc661b312",
+    "research/adapters/sandbox_eval_client.py": "fa23a3d576cdaac8f3e42bf64b7a0846790130d1e33359c717190db73d339a7e",
+    "research/contracts/sandbox_lifecycle.py": "e35fe6f2165d7e69ba78c236ffdad5bae6ed023bc84b9b9c472f4654be3595fd",
+    "research/search/__init__.py": "7b071c200a8740dbe58d5bd34d93015d33fffa60cbac52fa6f622380c68f299f",
+    "research/search/budget_transport.py": "f03c788013dcdc799ddce3994bde6e8012528e945d59126ba3d2cd8f6f6462b3",
+    "research/search/run_control.py": "627b9fb1ed2953f0119246f3b8c426ac05113067da41ee305e98bc32534558b1",
+    "research/search/search_vector.py": "647674f1b475e3e150ed4f65da6d740352b45ac61b383a2279bc0e1662cfc74b",
+    "research/search/validation_config.py": "2c0d397e199ee3fc598867769a8cac2539e6b990df546ddc27395215643787ce",
+    "OpenMLE-Evo/third_party/aira-evo/src/dojo/solvers/evo/operator_trace.py": "4dc8c99d751bc4da7e50484dbfde1badb1e404ed8ec65d332aa9b7f912a73d67"
+  },
+  "research_tests_passed": 533,
+  "evo_tests_passed": 114,
+  "evo_preexisting_failures": [
+    "test_gym_package_paths::test_same_parquet_is_consumed_by_existing_sft_builder"
+  ],
+  "evo_skipped": 2,
+  "new_source_typecheck_files": 50,
+  "legacy_type_comparison": {
+    "baseline_errors": 49,
+    "current_errors": 49,
+    "new": [],
+    "removed": []
+  },
+  "real_acceptance_model_requests": 0,
+  "limitations": [
+    "US008 must fix actual cancellation acknowledgement and cross-job scratch defects before any real acceptance.",
+    "Offline fixtures do not prove real model coverage or algorithm improvement."
+  ],
+  "composed_profile_test_included": true,
+  "secret_audit": {
+    "tracked_text_files": 830,
+    "secret_findings": 0,
+    "research_host_path_violations": 0
+  },
+  "streaming_followup_review": {
+    "profile_stream": true,
+    "research_transport_tests_passed": 93,
+    "real_backend_offline_tests_passed": 19,
+    "hydra_profile_tests_passed": 1,
+    "reason": "Preserved baseline documents large k3 nonstream requests hanging; full streaming consumption is guarded.",
+    "real_model_requests": 0
+  }
+}

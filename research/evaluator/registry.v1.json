@@ -1,0 +1,17 @@
+{
+  "registry_version": "evaluator-registry.v1",
+  "schema_version": 1,
+  "tasks": {
+    "hello_synth": {
+      "metric": "accuracy",
+      "split": "test",
+      "answer_file": "tasks/hello_synth/test_answer.csv",
+      "answer_sha256": "f25ab07cfc53a420662e3ef899df728de124136c70277b66236ca06f08638579",
+      "id_column": "id",
+      "target_column": "label",
+      "label_values": [0, 1],
+      "max_prediction_bytes": 1048576,
+      "max_rows": 100000
+    }
+  }
+}

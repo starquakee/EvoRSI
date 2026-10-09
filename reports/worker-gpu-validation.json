@@ -1,0 +1,26 @@
+{
+  "job_id": "job_df0c733602014ee1",
+  "status": "completed",
+  "gpu": {
+    "uid": 65432,
+    "cap_eff": "0000000000000000",
+    "torch": "2.6.0+cu124",
+    "device": "NVIDIA GeForce RTX 4060 Ti",
+    "tensor_result": 2.0
+  },
+  "score": 0.55,
+  "source_gate": {
+    "allowed": true,
+    "denials": [],
+    "check_kind": "static_admission_filter",
+    "entrypoint": "main.py",
+    "policy_sha256": "967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e",
+    "source_sha256": "fd67d5b77d907b645423c4a68e8c60ebba93f2dfb3eb1d50d2b86653c857ffce",
+    "policy_version": "source-gate.v2",
+    "entrypoint_sha256": "dfef4ad1c73de7e392c5aae5af9a2d6018a7d4e984d7320b85b427543b017bb7",
+    "security_boundary": false
+  },
+  "source_identity_verified": true,
+  "worker_cleanup_verified": true,
+  "model_requests": 0
+}

@@ -1,0 +1,90 @@
+{
+  "checks": {
+    "actual_runs": true,
+    "all_row_tokens": true,
+    "cached": true,
+    "op_crossover": true,
+    "op_debug": true,
+    "op_draft": true,
+    "op_improve": true,
+    "prerun_rejects": true,
+    "records": true,
+    "uncached_tokens": true,
+    "uncached_wall_s": true,
+    "unique_configs": true
+  },
+  "expected_claims": {
+    "actual_runs": 44,
+    "all_row_tokens": 1315148,
+    "cached": 14,
+    "op_crossover": 0,
+    "op_debug": 15,
+    "op_draft": 44,
+    "op_improve": 0,
+    "prerun_rejects": 2,
+    "records": 60,
+    "uncached_tokens": 930962,
+    "uncached_wall_s": 15345.9,
+    "unique_configs": 46
+  },
+  "facts": {
+    "actual_runs": 44,
+    "all_row_tokens": 1315148,
+    "cached": 14,
+    "cached_tags": [
+      "g01_i01",
+      "g01_i03",
+      "g01_i08",
+      "g01_i10",
+      "g01_i11",
+      "g02_i03",
+      "g02_i09",
+      "g03_i01",
+      "g03_i03",
+      "g03_i10",
+      "g04_i01",
+      "g04_i03",
+      "g04_i09",
+      "g04_i10"
+    ],
+    "cached_tokens_recounted": 384186,
+    "journal_nodes": 103,
+    "operator_totals": {
+      "analysis": 18,
+      "debug": 15,
+      "draft": 44,
+      "rich_memory_summary": 30
+    },
+    "prerun_rejects": 2,
+    "records": 60,
+    "rejected": [
+      {
+        "policy_safety": "empty_parent_selection_weights",
+        "tag": "g01_i06"
+      },
+      {
+        "policy_safety": "empty_parent_selection_weights",
+        "tag": "g03_i06"
+      }
+    ],
+    "run_dirs": 44,
+    "scored": 54,
+    "scored_cached": 13,
+    "scored_uncached": 41,
+    "source_hashes": {
+      "eval_log.jsonl": "1d82f90a154442f6df917662105ff71cabe27fa887b22b11e95531b43fd7ef00",
+      "summary.json": "59653781f83346aa3bc3c0061400067593e41bafb4b0f1b827c7c479d0aaef84"
+    },
+    "status_count_totals": {
+      "code_execution_error": 28,
+      "success": 54
+    },
+    "uncached_tokens": 930962,
+    "uncached_wall_s": 15345.9,
+    "unique_configs": 46
+  },
+  "failed_checks": [],
+  "problems": [],
+  "root": "<legacy-root>/formal_baseline",
+  "verdict": "PASS"
+}

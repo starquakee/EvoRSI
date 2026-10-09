@@ -1,0 +1,164 @@
+# Skill: aptos2019-blindness-detection
+
+## 1. Task-Specific Reading
+- Predict diabetic retinopathy severity from color fundus photographs. The label is an ordered 5-class diagnosis: 0 no DR, 1 mild, 2 moderate, 3 severe, 4 proliferative DR.
+- Treat this as medical ordinal image classification, not ordinary multiclass recognition. Adjacent mistakes are far less damaging than distant mistakes, and a model that preserves severity ranking can beat a higher argmax-accuracy model.
+- The metric is quadratic weighted kappa (QWK) between integer predicted grades and human grades. Optimize for ordered integer decisions after producing continuous severity evidence or ordered probabilities.
+- Data are noisy. Expect image artifacts, focus variation, under/overexposure, different cameras, and label ambiguity. Robust preprocessing and validation matter as much as backbone swaps.
+- The private test set is large enough that inference efficiency matters, but training data are only thousands of labeled images. Favor strong pretrained backbones, high-resolution fine-tuning, and validation-driven postprocessing over training from scratch.
+- The image content is a circular retina on dark background. Useful signal includes small lesions, hemorrhages, exudates, vascular abnormalities, and global disease severity. Losing effective retinal resolution directly hurts class 1/2 and 3/4 separation.
+- Dominant score levers:
+  - Retina-aware crop and illumination/color normalization before resize.
+  - High-resolution pretrained CNN/ViT/SSL backbones fine-tuned carefully.
+  - Ordinal/regression-style targets with OOF threshold optimization for QWK.
+  - Stratified folds, OOF predictions, and fold averaging.
+  - Moderate TTA and multi-architecture blending after the single pipeline is stable.
+  - Handling class imbalance and label noise without distorting QWK calibration.
+
+## 2. Highest-Expected-Score Strategy
+- Converge toward a high-resolution, fold-averaged ordinal ensemble:
+  - Preprocess each fundus image by cropping black borders to the retinal disk or foreground, then normalize illumination/contrast in a conservative way that preserves lesions.
+  - Train 4-5 stratified folds with strong ImageNet/IN22k-pretrained `timm` backbones.
+  - Produce continuous severity scores or ordered cumulative probabilities, not only hard argmax classes.
+  - Optimize four decision thresholds on OOF predictions to maximize QWK, then apply those thresholds to averaged test severity scores.
+- Model family:
+  - Primary strong route: ConvNeXt/EfficientNet-style CNNs at 384-512+ px, because retinal lesions are local and data are limited.
+  - Strong default backbones: `tf_efficientnetv2_s.in21k_ft_in1k`, `tf_efficientnet_b4_ns`/`b5.ns_jft_in1k`, `convnextv2_base.fcmae_ft_in22k_in1k`, `convnext_small.fb_in22k_ft_in1k`, or `eva02_base_patch14_448.mim_in22k_ft_in22k_in1k` if compute and pretrained weights are available.
+  - Ensemble diversity route: one efficient high-resolution CNN, one ConvNeXt-family CNN, and one ViT/SSL-style model such as EVA/DINO if feasible.
+- Target/loss:
+  - Best first choice for QWK: scalar severity regression or ordinal BCE with K-1 sigmoid outputs. Both preserve ordering and enable threshold tuning.
+  - A robust medal-oriented setup is a dual-head model: 5-class CE head for class discrimination plus scalar or ordinal head for severity ordering. Optimize final predictions from the ordinal/scalar output; use CE as auxiliary regularization if implemented cleanly.
+  - If keeping one head only, use ordinal BCE or scalar regression with SmoothL1/MSE on normalized labels. Avoid final raw softmax argmax as the only decision rule.
+- Preprocessing:
+  - Crop the fundus foreground before resizing. Compute a mask from non-black pixels or saturation/brightness and crop the largest retinal region with margin. This increases effective lesion resolution.
+  - Apply mild illumination normalization: subtract or blend a large Gaussian blur background, or use CLAHE on luminance/value channel with low probability. Keep it consistent between train and test.
+  - Preserve color information. Diabetic retinopathy cues are color/contrast sensitive; do not over-normalize into grayscale.
+- Validation:
+  - Use stratified folds on diagnosis. If any identifier or metadata implies repeated patient/acquisition grouping, use group-aware stratification; otherwise use deterministic stratified K-fold.
+  - The trusted unit is OOF QWK after threshold tuning. Monitor fold-wise QWK and severe off-by-2+ errors.
+  - Use OOF continuous predictions for threshold optimization, ensembling weights, pseudo-label filtering, and label-noise review.
+- Inference:
+  - Average fold predictions as continuous severity scores or cumulative probabilities before thresholding.
+  - Use small TTA that respects fundus invariances: horizontal/vertical flips and mild scale/crop TTA are usually useful; avoid aggressive rotations/distortions at inference unless validated.
+  - Final output must be integer grades 0-4 after OOF-derived thresholds and clipping.
+
+## 3. Strong First Implementation Plan
+- Build one complete PyTorch training script around a serious single-model, multi-fold pipeline:
+  - Backbone: start with `tf_efficientnetv2_s.in21k_ft_in1k` or `convnextv2_base.fcmae_ft_in22k_in1k` depending on speed. Use 384 px for the first stable run; move to 448/512 once the pipeline works.
+  - Head: scalar severity regression head producing one continuous value in label scale 0-4, or ordinal BCE head with 4 logits predicting P(grade >= 1..4). Scalar regression is simplest for threshold search; ordinal BCE is more metric-aligned.
+  - Loss: SmoothL1/MSE for scalar severity, BCEWithLogitsLoss for ordinal cumulative labels, optionally plus low-weight CE auxiliary loss if using a 5-class head.
+  - Folds: 5-fold StratifiedKFold if time allows; 4 folds if training at high resolution is tight. Save OOF predictions for every training image.
+  - Resolution: 384 px first, with retinal crop. If the backbone and time budget allow, train/fine-tune at 448 or 512 px for the final folds.
+- Preprocessing in the dataset:
+  - Load RGB fundus image.
+  - Crop black/dark borders using thresholded grayscale or saturation mask; keep a small margin around the retinal disk.
+  - Optionally apply a deterministic or low-probability fundus illumination correction, e.g. blend original image with a large-kernel blurred version to reduce camera lighting variation.
+  - Resize to target square using area/interpolation appropriate to downsampling.
+  - Normalize with ImageNet statistics for pretrained backbones.
+- Augmentation:
+  - Use moderate geometric transforms: random resized crop/scale, small shift/scale/rotate, horizontal flip, vertical flip if validation supports it.
+  - Use photometric transforms that mimic acquisition variation: brightness/contrast, hue/saturation/value, mild blur/noise, low-probability CLAHE.
+  - Use CoarseDropout lightly; do not mask large retina regions early because lesions are small.
+  - Delay MixUp/CutMix unless the ordinal/regression target handling is correct. If used, MixUp is safer than CutMix for severity labels; keep alpha small.
+- Training:
+  - Use AdamW, discriminative learning rates, cosine schedule with warmup, mixed precision, gradient accumulation for effective batch 32+ if needed.
+  - Freeze the backbone briefly only if convergence is unstable; otherwise fine-tune all layers with a small backbone LR.
+  - Use class-balanced sampling or per-class sampling only if minority severe classes are under-learned; check OOF confusion before adding heavy weights.
+  - Select best checkpoints by validation QWK after fold-local thresholding or by a severity loss strongly correlated with QWK, but keep OOF predictions from the chosen checkpoint.
+- Postprocessing:
+  - Convert each validation/test prediction to a continuous severity score:
+    - scalar head: use clipped scalar output in [0, 4].
+    - ordinal head: use sum of sigmoid cumulative probabilities as expected grade.
+    - CE head fallback: use expected value `sum(class_id * softmax_prob)`.
+  - Optimize 4 monotonically increasing thresholds on OOF scores for QWK.
+  - Apply those thresholds to averaged test scores; clip to 0-4.
+
+## 4. High-ROI Upgrades Across Rounds
+- Round 2:
+  - Increase effective resolution to 448/512 after validating the retinal crop. This is usually the highest-return upgrade because small lesions drive severity grades.
+  - Tune the preprocessing variants: raw crop only vs. crop plus illumination correction vs. crop plus CLAHE. Keep the one that improves OOF QWK, not just loss.
+  - Compare scalar regression, ordinal BCE, and CE+expected-value heads using identical folds. Keep all OOF scores so they can be blended later.
+  - Add fold averaging if the first run used one fold. A full 5-fold average is often a larger gain than another small hyperparameter change.
+  - Optimize thresholds globally on all OOF scores, then test fold-specific threshold stability. If thresholds vary wildly by fold, prefer simpler/regularized thresholds.
+- Round 3:
+  - Add a second backbone with different inductive bias: EfficientNetV2 or EfficientNet-B4/B5 if the first model is ConvNeXt; ConvNeXt if the first model is EfficientNet; EVA/DINO-style ViT/SSL if feasible.
+  - Blend continuous OOF/test severity scores from models, then re-optimize thresholds on the blended OOF score. Do not threshold each model first.
+  - Add TTA: original + horizontal flip + vertical flip, optionally multi-scale center crops. Average score/probability outputs before thresholding.
+  - Add EMA/SWA-style checkpoint averaging if available in the implementation. For noisy labels, smoothed weights can improve QWK stability.
+  - Review OOF high-confidence off-by-2+ mistakes as likely noisy labels or preprocessing failures. If excluding/reweighting, do it only after confirming fold-level QWK gains.
+- Late round:
+  - Train 2-3 diverse architectures at the best validated resolution and blend by OOF QWK or simple equal weights. A strong final blend might combine high-res EfficientNet, ConvNeXt, and EVA/DINO expected-grade outputs.
+  - Try pseudo-labeling only after a stable fold ensemble exists. Select high-confidence test images with predictions far from thresholds; include them with low weight or hard labels in retraining. Avoid pseudo-labels near class boundaries.
+  - Tune class prior/thresholds cautiously if public/private distribution may differ. Prefer thresholds learned from robust OOF rather than leaderboard chasing.
+  - Consider a dual-head ensemble where one model is optimized for ordinal BCE and another for scalar regression; their errors can be complementary.
+  - Add higher resolution only if it preserves enough batch size and does not overfit. For very high resolution, progressive resizing is safer than training full-resolution from the start.
+
+## 5. Validation and Metric Optimization
+- Use stratified folds over the 5 diagnosis classes. Severe grades are rarer and must appear in every fold for threshold tuning to be meaningful.
+- If there is any reliable patient/study/source grouping signal, split by group to avoid the same eye/patient/acquisition pattern in train and validation. If no such signal exists, do not invent groups from filenames.
+- The primary validation score is OOF QWK after a single global threshold optimization on continuous OOF predictions.
+- Optimize thresholds as four ordered cut points converting score to class:
+  - class 0 if score < t0
+  - class 1 if t0 <= score < t1
+  - class 2 if t1 <= score < t2
+  - class 3 if t2 <= score < t3
+  - class 4 otherwise
+- Search thresholds with a robust method: coarse grid around natural boundaries, then local coordinate search/Nelder-Mead-like optimization. Enforce monotonicity and clip predictions to 0-4.
+- Avoid optimizing thresholds separately on each validation fold and then applying arbitrary fold thresholds to test. Use all OOF predictions to get final global thresholds for the final averaged model/blend.
+- Trust improvements that raise OOF QWK and reduce severe-distance errors across multiple folds. Treat tiny gains from threshold search, TTA, or weights as unstable unless fold-wise behavior is consistent.
+- Track additional diagnostics:
+  - Fold-wise QWK before and after threshold tuning.
+  - Confusion matrix with attention to off-by-2+ errors.
+  - Per-class recall, especially grades 1, 3, and 4.
+  - Score distributions by true class to see threshold overlap.
+- When local CV and leaderboard diverge:
+  - Prefer robust OOF if folds are stratified and preprocessing/inference are consistent.
+  - Suspect distribution shift in camera/exposure and class priors before overfitting thresholds to public feedback.
+  - Keep final thresholds anchored to OOF; use leaderboard only to choose between validated model families, not to hand-tune class cutoffs blindly.
+
+## 6. Model, Feature, and Preprocessing Priorities
+- Retinal crop first:
+  - Remove black borders and unused background.
+  - Keep the whole circular fundus with margin; do not crop to only the optic disk or a small central region.
+  - Validate crop failures visually during development if possible, because a bad crop can destroy severe-class cues.
+- Illumination handling:
+  - Normalize camera lighting variation with mild background subtraction/blending or CLAHE.
+  - Keep color lesions visible; avoid aggressive histogram equalization that changes pathology appearance.
+  - Apply the same deterministic normalization at inference.
+- Resolution:
+  - 384 px is a strong fast starting point.
+  - 448/512 px is preferred for final models if time and memory allow.
+  - Progressive resizing can reduce time and regularize high-resolution fine-tuning.
+- Backbones:
+  - EfficientNetV2-S/B4/B5 and ConvNeXt/ConvNeXtV2 are high-value for retinal images because they handle local texture and limited data well.
+  - EVA/DINO/ViT-style models are useful as diverse ensemble members, especially if pretrained weights are available and high-resolution fine-tuning is stable.
+  - Use GeM or strong pooling for CNN feature maps when implementing custom heads; use the backbone’s correct pooled representation for ViTs.
+- Outputs:
+  - Preferred score source: scalar severity or expected grade from ordinal cumulative probabilities.
+  - Keep raw continuous OOF/test scores for every fold/model. Threshold only once at final postprocessing.
+  - For CE models, convert probabilities to expected grade rather than argmax before blending/thresholding.
+- Imbalance/noise:
+  - Use stratification and moderate balanced sampling before heavy loss weighting.
+  - Severe classes need enough sampling, but over-weighting them can over-predict grade 3/4 and hurt QWK.
+  - Label smoothing can help CE auxiliary heads; do not smooth ordinal/regression targets so much that severity ordering collapses.
+- TTA:
+  - Use flip TTA and mild scale/crop TTA after validating it improves OOF-style holdout or fold scores.
+  - Average scores/probabilities, not hard labels.
+- Ensembling:
+  - Fold average first.
+  - Then blend different backbones and target formulations.
+  - Re-optimize thresholds on blended OOF scores, not on individual model outputs.
+
+## 7. Avoid or Delay
+- Avoid raw multiclass argmax as the final decision path. QWK wants ordered severity, and argmax discards useful near-boundary information.
+- Avoid making segmentation, optic-disk localization, or lesion detection the main first-round solution. They can help in specialized systems, but the high-ROI path here is image-level ordinal modeling with strong preprocessing.
+- Avoid external retina datasets, private labels, manual relabeling, or any unavailable medical resources as the default plan.
+- Avoid blindly applying generic medical CT/MRI windowing, grayscale conversion, or tabular recipes. This is RGB fundus photography.
+- Avoid overly aggressive augmentations that remove or hallucinate lesion evidence: large CutMix regions, heavy blur, extreme color shifts, strong rotations/distortions, or excessive dropout.
+- Avoid threshold tuning on test predictions or leaderboard feedback. Tune on OOF only.
+- Avoid leakage-prone validation. If repeated patient/acquisition grouping exists, random stratified splits can overstate performance.
+- Avoid trusting cross-entropy loss or accuracy alone. A lower loss model can have worse QWK if score ordering or thresholds are poor.
+- Delay pseudo-labeling until a reliable fold ensemble and OOF thresholds exist. Pseudo-labels near decision boundaries are likely to reinforce mistakes.
+- Delay large multi-model ensembles until preprocessing, target formulation, and threshold optimization are stable. A diverse ensemble of flawed pipelines is usually weaker than one clean high-resolution ordinal pipeline.
+- Avoid overfitting thresholds to small validation folds. Use global OOF thresholds and require fold-wise sanity.
+- Avoid hard class-prior correction unless there is clear validation evidence. The private test distribution may differ from public samples, and QWK can be harmed by arbitrary prior matching.

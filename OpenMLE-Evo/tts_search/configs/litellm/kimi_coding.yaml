@@ -1,0 +1,14 @@
+_target_: litellm.Router
+_convert_: all
+
+model_list:
+  - model_name: ${oc.env:OPENMLE_MODEL_ID,k3}
+    litellm_params:
+      model: openai/${oc.env:OPENMLE_MODEL_ID,k3}
+      api_key: ${oc.env:PRIMARY_KEY,EMPTY}
+      base_url: ${oc.env:SGLANG_BASE_URL,https://api.kimi.com/coding/v1}
+      temperature: 1.0
+      top_p: 0.95
+      max_tokens: ${oc.decode:${oc.env:OPENMLE_MAX_TOKENS,32768}}
+      timeout: ${oc.decode:${oc.env:OPENMLE_LLM_TIMEOUT,600}}
+      num_retries: ${oc.decode:${oc.env:OPENMLE_LLM_RETRIES,1}}

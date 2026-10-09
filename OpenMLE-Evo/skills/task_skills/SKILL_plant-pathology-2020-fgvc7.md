@@ -1,0 +1,156 @@
+# Skill: plant-pathology-2020-fgvc7
+
+## 1. Task-Specific Reading
+- This is image-level apple leaf disease classification from RGB photographs. The model must output probabilities for four target columns: `healthy`, `rust`, `scab`, and the co-disease/combination class named in the data. There are no boxes, masks, metadata, temporal structure, or text inputs.
+- Treat the training labels as mutually exclusive one-hot disease states for the main classifier: each image belongs to exactly one submitted column, even though one semantic class represents more than one disease on the leaf.
+- The evaluation metric is mean column-wise ROC AUC. Each class is scored as a one-vs-rest ranking problem, then averaged. This makes minority-class ranking as important as majority-class ranking; a weak rare combination class can cap the final score even if healthy/rust/scab look good.
+- Final submissions must be continuous probabilities per column. Do not threshold, round, or optimize accuracy. Probability ordering within each column matters more than exact calibration, but calibration matters for stable fold and model averaging.
+- Disease cues are fine-grained visual patterns: rust spots, scab lesions, mixed symptoms, color changes, leaf texture, lighting, and background/pose variation. The model needs enough resolution to preserve small lesions while retaining whole-leaf context.
+- Dominant score levers:
+  - Strong ImageNet/IN22k-pretrained image backbones fine-tuned at medium-high resolution.
+  - Stratified OOF validation scored by mean column-wise AUC.
+  - Rare class handling for the combination class without destroying probability ranking.
+  - Augmentation that simulates leaf pose, scale, lighting, shade, and color variation while preserving disease evidence.
+  - Fold averaging, TTA, and a small diverse ensemble.
+  - Metric-aligned checkpointing and blend selection using OOF AUC, not loss or accuracy alone.
+
+## 2. Highest-Expected-Score Strategy
+- Converge toward a 4- or 5-fold ensemble of strong pretrained image classifiers, each trained on the four class indicators and selected by OOF mean column-wise ROC AUC.
+- Use a high-transfer backbone as the main path:
+  - Primary single-model choices: `eva02_base_patch14_448.mim_in22k_ft_in22k_in1k` at 448, `convnextv2_base.fcmae_ft_in22k_in1k` at 384-448, or `tf_efficientnetv2_s.in21k_ft_in1k` at 384-448 for faster iteration.
+  - If memory/time are tight, start with `convnextv2_tiny.fcmae_ft_in22k_in1k`, `convnextv2_small.fcmae_ft_in22k_in1k`, or EfficientNetV2-S; these remain useful ensemble components.
+  - For a final high-ceiling blend, combine one transformer-like model such as EVA, one CNN such as ConvNeXt/EfficientNet, and optionally one self-supervised-style feature model if available through `timm`. Diversity matters more than adding many near-identical runs.
+- Use resolution as a deliberate ladder:
+  - First robust pass at 384 or 448, not 224, because lesion-level symptoms can be small.
+  - If training is unstable, warm start at 224-320 for a few epochs, then fine-tune at 384-448.
+  - Test 512 only after OOF confirms that the model benefits from more detail; too-large crops can overfit backgrounds or lesion artifacts.
+- Training objective:
+  - Use a four-logit classifier. Since labels are one-hot, CrossEntropy with light label smoothing is a stable primary loss.
+  - Because the metric is column-wise AUC, consider a metric-aligned auxiliary BCEWithLogitsLoss on the four one-hot columns, especially if the rare combination class ranks poorly. A practical loss is `CE + 0.3 * BCE`, tuned by OOF AUC.
+  - Pure BCE can work, but it may produce non-exclusive probabilities; pure CE can under-serve rare one-vs-rest ranking. The hybrid is a strong compromise for this target.
+- Validation should drive every modeling decision:
+  - Stratify by the argmax label, not by individual columns independently.
+  - Compute OOF mean column-wise ROC AUC over all training images.
+  - Track per-class AUC, especially the combination class, because the metric gives it equal weight.
+- Inference:
+  - For CE-trained models, use softmax probabilities. For BCE-trained or hybrid models, sigmoid outputs can be blended with softmax outputs only after OOF checking. A safe default for hybrid loss is softmax from the logits for submission, with sigmoid used diagnostically for per-class AUC if useful.
+  - Average probabilities across folds. Add TTA using flips and mild scale/crop variants that are label-preserving for leaves.
+  - Blend only models that improve OOF mean column-wise AUC or strengthen a weak class without hurting the average.
+- Medal-oriented endpoint:
+  - A strong final solution should have clean stratified OOF, 4-5 fold averaging, at least one high-resolution strong backbone, disease-preserving augmentations, TTA, and a compact diverse blend. Pseudo-labeling and larger ensembles are late tools, not substitutes for validation discipline.
+
+## 3. Strong First Implementation Plan
+- Build a complete PyTorch + `timm` single-file solution around one serious 4-class classifier.
+- First backbone:
+  - Use `tf_efficientnetv2_s.in21k_ft_in1k` at 384 or `convnextv2_small.fcmae_ft_in22k_in1k` at 384 for speed and reliability.
+  - If comfortable with runtime and memory, use `eva02_base_patch14_448.mim_in22k_ft_in22k_in1k` at 448 as the first high-ceiling model.
+  - Replace the classifier with a dropout head producing four logits. Use dropout around 0.2-0.4 and drop path around 0.1-0.2 when supported.
+- Target and loss:
+  - Convert one-hot columns to a class index for CrossEntropy.
+  - Keep the original one-hot matrix for metric computation and optional auxiliary BCE.
+  - Start with CrossEntropyLoss with label smoothing around 0.05-0.1. If implementing the hybrid is straightforward, use `CE + 0.2-0.4 * BCEWithLogitsLoss`.
+  - Use class-balanced sampling or mild class weights only if the loaded class counts show the combination class is severely underrepresented. Do not over-weight so much that majority-class AUC collapses.
+- Validation:
+  - Use `StratifiedKFold` on the class index, preferably 5 folds. If the rare class has too few examples for stable 5 folds, use 4 folds and preserve class presence in every fold.
+  - Save OOF probabilities and compute the exact mean of four one-vs-rest ROC AUCs.
+  - Select checkpoints by validation mean column-wise AUC, not validation loss.
+- Preprocessing:
+  - Load RGB images and normalize with ImageNet mean/std for pretrained models.
+  - Resize/crop to preserve the full leaf and enough surrounding context. Avoid tight lesion-only crops.
+  - Use square input size required by the backbone, but prefer random resized crop with a high scale floor over arbitrary center crop that may trim symptoms.
+- First augmentation:
+  - `RandomResizedCrop` with scale roughly 0.75-1.0 or 0.8-1.0.
+  - Horizontal flip and vertical flip are acceptable for leaf disease images because disease identity is orientation-invariant.
+  - Mild rotation/shift/scale to handle camera angle and leaf pose.
+  - Brightness/contrast and HSV jitter are important for shade, light, and leaf color variation, but keep them moderate so rust/scab colors remain learnable.
+  - Low-probability blur/noise can improve robustness. Coarse dropout should be light; large holes can erase lesions.
+  - MixUp with alpha around 0.1-0.3 is reasonable. Delay CutMix unless OOF improves, because pasted patches can create unrealistic mixed-disease labels.
+- Training:
+  - AdamW with discriminative learning rates: lower LR for pretrained backbone, higher LR for head.
+  - Cosine schedule with warmup, mixed precision, gradient clipping, and effective batch size around 32-64 through accumulation if needed.
+  - Train long enough for AUC to plateau; avoid choosing a single late epoch by loss if AUC peaked earlier.
+  - EMA is a good first-run addition if simple, and validation should use the EMA weights.
+- First inference:
+  - Predict each test image with every fold checkpoint.
+  - Use TTA over identity and horizontal/vertical flips; add a small multi-crop or resize-scale TTA only if the validation pipeline supports it.
+  - Average fold/TTA probabilities and keep the four columns continuous.
+
+## 4. High-ROI Upgrades Across Rounds
+- Round 2:
+  - Move from a partial run to full 5-fold training if the first pass used fewer folds. Fold averaging is usually the cleanest gain for mean AUC.
+  - Compare 384 vs 448 with the same folds and model family. Lesion detail often improves with resolution, but OOF must confirm the gain.
+  - Tune augmentation intensity: crop scale floor, HSV strength, brightness/contrast, rotation range, MixUp alpha/probability, and CoarseDropout size. Optimize OOF mean AUC and per-class AUC, not visual plausibility alone.
+  - Add class-aware sampling or a small class-weight factor if the combination class has low OOF AUC and few positives. Keep the effect mild and verify that healthy/rust/scab AUC do not fall.
+  - Try hybrid CE+BCE if the first model used only CE, or compare pure BCE if the rare class is consistently under-ranked.
+- Round 3:
+  - Train a complementary backbone: ConvNeXt/EfficientNet if the first model was EVA, or EVA/ViT-like if the first model was CNN. Blend by OOF AUC.
+  - Add a second seed for the best single configuration if fold variance is high. Multi-seed averaging can be higher ROI than a much larger architecture.
+  - Use stronger TTA: identity, horizontal flip, vertical flip, both flips, and possibly small resize/crop variants. Avoid rotations at inference unless the validation TTA confirms benefit.
+  - Coarse-grid blend weights using OOF predictions. Prefer simple weights and reject blends that improve the public-looking average by hurting the rare class OOF ranking.
+  - Test 512 fine-tuning for the best backbone only if 448 is clearly capacity-limited.
+- Late round:
+  - Add pseudo-labeling only after a stable fold ensemble exists. Use high-confidence test predictions as soft labels with low weight; avoid ambiguous examples and monitor original-fold OOF.
+  - Try SWA or stronger EMA if individual checkpoints are noisy and the OOF effect is positive.
+  - Add one large high-ceiling model such as EVA-02 Large or ConvNeXt V2 Large only if time remains and the current validation protocol is stable.
+  - Consider rank averaging for heterogeneous ensembles if probability calibration differs but each model has strong per-class AUC. Use OOF to choose between rank, logit, and probability averaging.
+  - Inspect OOF failures by class and confidence to guide augmentation/model changes, not to hand-label or inject external information.
+
+## 5. Validation and Metric Optimization
+- Use stratified folds on the single class index derived from the one-hot targets. This preserves each disease state in validation and aligns with the image-level mutually exclusive target structure.
+- There is no described group key. Do not invent groups from image IDs. If a real source/group field appears in the data, switch to group-aware stratification; otherwise deterministic stratified folds are the trusted local signal.
+- Compute the exact validation metric on OOF predictions:
+  - For each of the four columns, compute ROC AUC using the true binary column and predicted probability for that column.
+  - Average the four AUCs equally.
+  - Also report per-class AUC so rare-class regressions are visible.
+- Checkpoint by mean column-wise AUC. Loss, accuracy, macro recall, and F1 are auxiliary diagnostics only.
+- For AUC, threshold tuning is irrelevant for final predictions. Do not tune 0.5 thresholds or convert probabilities to hard labels.
+- Probability handling:
+  - Use softmax probabilities when the model is trained primarily as mutually exclusive multiclass.
+  - If using BCE or hybrid loss, validate whether softmax(logits) or sigmoid(logits) gives better OOF mean column-wise AUC and more stable blends.
+  - Avoid aggressive clipping because it can create ties and hurt AUC. Light epsilon clipping for numeric stability is fine.
+- OOF usage:
+  - Store OOF probabilities for every fold, model, seed, resolution, and TTA variant.
+  - Use OOF to select resolution, loss, sampling, TTA, and blend weights.
+  - When OOF and leaderboard disagree, trust well-stratified OOF unless there is a clear preprocessing mismatch or high fold variance. Do not chase one leaderboard submission with probability hacks.
+- Calibration:
+  - Temperature scaling is not a first-order AUC improvement because it is monotonic for a single model.
+  - It may help heterogeneous probability averaging, but only keep it if OOF blend AUC improves.
+
+## 6. Model, Feature, and Preprocessing Priorities
+- Backbones:
+  - Best first serious models: EfficientNetV2-S at 384, ConvNeXt V2 Small/Base at 384-448, or EVA-02 Base at 448.
+  - Final diversity: one CNN-family model, one transformer/EVA-family model, and one alternate seed or self-supervised-style model if available.
+  - Avoid relying on a tiny baseline as the final strategy; use compact models for iteration and as ensemble components.
+- Image size:
+  - Prioritize 384-448. The task is fine-grained enough that 224 is mainly an iteration size.
+  - Use 512 as a late experiment, not an automatic upgrade.
+  - Preserve full-leaf context while keeping lesion texture visible.
+- Augmentation:
+  - Highest value: flips, mild rotations, shift/scale, high-scale random crop, brightness/contrast, HSV jitter.
+  - Medium value: MixUp, light blur/noise, light CoarseDropout, random resized crop tuning.
+  - Risky: heavy CutMix, large random erasing, extreme hue changes, very low crop scale.
+- Loss and imbalance:
+  - Start CE with light label smoothing or CE+BCE hybrid.
+  - Use WeightedRandomSampler or mild class weights only after inspecting class counts and per-class OOF AUC.
+  - Try focal loss only if BCE/CE under-rank hard rare positives; focal can over-focus and reduce overall AUC.
+- Inference priorities:
+  - Fold average first.
+  - Flip TTA second.
+  - Diverse model/seed blend third.
+  - Pseudo-label and rank averaging late.
+- Features:
+  - No tabular features are described, so image pixels are the modeling signal.
+  - Do not engineer features from image IDs.
+  - Do not build segmentation or lesion detectors unless a mature classifier has plateaued; image-level transfer learning should dominate.
+
+## 7. Avoid or Delay
+- Avoid treating this as object detection, segmentation, restoration, or medical stain/windowing. The target is image-level leaf disease state.
+- Avoid external datasets, private labels, manual relabeling, or expert annotations as the default plan.
+- Avoid hard labels, threshold tuning, accuracy-based model choice, or class-prior forcing in the submission. Mean column-wise AUC rewards ranking probabilities.
+- Avoid leakage-prone validation such as random splits without stratification when the rare class is small, or choosing folds after seeing leaderboard feedback.
+- Avoid tight automatic leaf/lesion crops as the first strategy. Crops can remove mixed symptoms or useful whole-leaf context.
+- Avoid extreme color augmentation that destroys disease-specific hue cues, especially for rust and scab.
+- Avoid heavy CutMix before a strong baseline. It can create artificial mixed-disease evidence and confuse the combination class.
+- Avoid huge heterogeneous ensembles before OOF tracking is clean. Two or three well-validated diverse components are better than many uncalibrated models.
+- Delay pseudo-labeling until fold-averaged OOF is stable and high-confidence predictions are clearly separated.
+- Delay elaborate calibration and stacking until the base models, folds, TTA, and per-class AUC diagnostics are correct.

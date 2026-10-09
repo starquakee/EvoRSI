@@ -1,0 +1,177 @@
+# Skill: mlsp-2013-birds
+
+## 1. Task-Specific Reading
+- This is weakly labeled bioacoustic multi-label classification. Each example is a ten-second mono WAV clip, and the target is the set of bird species present among 19 possible species.
+- The useful prediction unit is the recording/species pair. Submit continuous probabilities or ranking scores for every species in every unlabeled test recording; do not collapse to a single species per clip.
+- The metric is ROC AUC over binary labels and predictions. Treat it as a ranking metric:
+  - thresholds are irrelevant for submission;
+  - exact probability calibration matters less than ordering positives above negatives;
+  - if the scoring implementation flattens recording/species pairs, cross-species score scale also matters, not just within-species ranking.
+- The dataset is extremely small: 645 total recordings, with roughly half labeled and half unlabeled. A large deep model trained only on labels is high variance. The strongest strategy should combine stable feature-based models with one or more carefully regularized spectrogram models.
+- The modality is audio, but the supplied preprocessing is unusually valuable:
+  - raw WAVs allow log-mel, STFT, MFCC, chroma, spectral contrast, RMS/noise, and temporal summary features;
+  - provided spectrogram and filtered spectrogram images allow image-style CNNs or deterministic image summaries;
+  - provided segment features, segment rectangles, and histogram-of-segments features are direct multi-instance representations of bird-call-like regions and should not be ignored.
+- Dominant score levers:
+  - leakage-safe validation on training recordings with reliable multi-label stratification;
+  - per-species OOF AUC plus flattened OOF AUC as the model-selection target;
+  - strong one-vs-rest models on aggregated segment/audio features;
+  - compact spectrogram CNN/SED predictions as a diverse second view;
+  - OOF weight optimization/rank blending across model families;
+  - class-wise monotonic transforms and clipping only when they improve OOF AUC.
+
+## 2. Highest-Expected-Score Strategy
+- Converge toward a hybrid ensemble with two complementary pillars:
+  - Feature ensemble: one-vs-rest LightGBM/XGBoost/CatBoost, calibrated logistic/ridge, ExtraTrees/RandomForest, and possibly small MLPs over fixed recording-level features.
+  - Spectrogram ensemble: small-to-medium CNN/SED models trained on log-mel or provided filtered spectrogram images with strong regularization, used for diversity rather than as the only signal.
+- Make the feature ensemble the backbone of the solution. With only a few hundred labeled clips, handcrafted and supplied segment features are more statistically stable than fine-tuning large audio transformers.
+- Build recording-level features from every available audio representation:
+  - histogram-of-segments vector as a first-class feature block;
+  - aggregate the 38-dimensional segment features per recording using count, mean, std, min, max, median, quantiles, skew-like summaries, and top-k/energy-like summaries when segment scores or rectangles allow them;
+  - include segment count, missing-segment indicator, rectangle area/aspect/frequency/time-position aggregates, and proportions of segments in low/mid/high frequency bands;
+  - compute raw WAV features: log-mel band statistics, MFCC mean/std/quantiles, spectral centroid/bandwidth/rolloff/flatness/contrast, zero-crossing rate, RMS/energy, high-frequency energy ratios, temporal energy quantiles, and simple noise/rain proxies;
+  - compute image summaries from provided spectrograms/filtered spectrograms: global intensity quantiles, per-frequency and per-time projections, connected-component-like activity if simple, and contrast/noise-filter difference features.
+- Train separate binary models for each species instead of forcing a multiclass objective. Multi-label positives can co-occur, and BCE/one-vs-rest objectives align with the label structure.
+- For GBDT:
+  - use regularization suitable for tiny data: shallow or moderate depth, subsampling, column sampling, large enough leaf sizes, and early stopping on folds;
+  - train LightGBM on CPU; use XGBoost with `early_stopping_rounds` in the constructor if used;
+  - train one model per species, with class weighting or sample weighting for rare species, but cap weights to avoid making a few positives dominate.
+- For linear models:
+  - use StandardScaler/RankGauss views and LogisticRegression or RidgeClassifier/SGD-style linear heads converted to scores;
+  - these often produce robust rankings on small-N high-dimensional feature sets and add blend diversity.
+- For spectrogram models:
+  - prefer TimmSED-style CNN with attention pooling or a compact multi-label CNN over a huge foundation model;
+  - use log-mel spectrograms from the 10-second clips, ideally 128 or 256 mel bins, hop length fine enough to preserve short bird calls;
+  - train with BCEWithLogits or focal BCE, mixup with multi-label targets, light SpecAugment, and early stopping by OOF AUC;
+  - if using provided filtered spectrogram BMPs, treat them as denoised image inputs and compare with raw log-mel, because stationary-noise suppression is likely useful in wind/rain clips.
+- Blend by OOF predictions, not by standalone intuition:
+  - optimize weights on identical folds using flattened AUC and mean per-class AUC;
+  - for AUC, rank-transform predictions before blending can be strong, but keep a raw-probability blend candidate because cross-class scale may matter;
+  - use per-class blend weights if OOF positives are sufficient, otherwise use global family weights to reduce overfitting.
+- Do not depend on external datasets, species-range metadata, private labels, or non-local pretrained audio checkpoints as the default path. Use preinstalled or locally available timm/image weights only if the execution environment already provides them; the core plan must remain competitive from supplied data and installed libraries.
+
+## 3. Strong First Implementation Plan
+- Build one complete solution script around a serious OOF-driven hybrid feature ensemble.
+- Parse labels into a binary target matrix of shape recordings x 19. Use only training-fold recordings for model fitting and unlabeled test recordings for final prediction.
+- Create a reliable feature matrix before any deep learning:
+  - load histogram-of-segments as direct numeric columns;
+  - aggregate segment features per recording with count, mean, std, min, max, median, 10/25/75/90 percentiles, and missing indicators;
+  - aggregate segment rectangles: number of segments, total/mean/max box area, aspect ratio stats, x/y center stats, width/height stats, and frequency-band occupancy;
+  - compute WAV-level features from the 10-second waveform at native or consistent sample rate: MFCC, log-mel band means/stds/quantiles, spectral contrast, centroid, rolloff, bandwidth, flatness, RMS, ZCR, low/mid/high frequency energy ratios, and time-sliced energy summaries;
+  - add summaries from supplied spectrogram and filtered spectrogram images if easy: intensity distribution, row/column projection quantiles, and filtered-minus-unfiltered contrast/noise features.
+- Use multiple preprocessing views:
+  - raw numeric features with median imputation;
+  - standardized features for linear and MLP models;
+  - RankGauss or QuantileTransformer view for linear/NN diversity;
+  - optional PCA/SVD components on high-dimensional spectral blocks, concatenated with original features rather than replacing them.
+- Validation:
+  - use iterative multi-label stratification if implemented compactly; otherwise stratify by a compact label signature such as label count plus rarest/primary positive class, and verify every fold has positives for most species;
+  - use 5 folds as the first reliable default. With very rare species, reduce fold count or force rare positives into train/validation coverage rather than creating folds with zero positives.
+- First model set:
+  - per-species LightGBM binary models on raw/engineered features with conservative regularization;
+  - per-species XGBoost or CatBoost as diversity if time permits;
+  - standardized LogisticRegression/Ridge/SGD one-vs-rest models for stable linear rankings;
+  - ExtraTrees/RandomForest one-vs-rest for nonlinear diversity;
+  - optional small MLP on RankGauss features with heavy dropout only if it is quick and OOF-tracked.
+- Training target/loss:
+  - binary targets per species;
+  - use class weights or positive weights only where needed for rare species, capped and validated by AUC;
+  - optimize model selection using OOF AUC, not logloss.
+- Inference/postprocessing:
+  - average fold predictions for each model family;
+  - build OOF and test prediction matrices for each family;
+  - blend raw predictions and rank-normalized predictions as separate candidates;
+  - tune global and per-family weights on OOF flattened AUC, then confirm mean per-species AUC does not collapse for rare classes;
+  - clip outputs to a small open interval only for numerical sanity; clipping should not change ranking materially.
+- Add one compact spectrogram CNN only after the feature pipeline is stable:
+  - train on log-mel or filtered spectrogram images at modest resolution;
+  - use BCEWithLogits, mixup, light SpecAugment, and early stopping;
+  - include its fold OOF/test predictions in the same blender, even if standalone AUC is weaker, because it may rank examples differently from tabular features.
+
+## 4. High-ROI Upgrades Across Rounds
+- Round 2:
+  - Expand and audit feature blocks. The highest ROI is usually better aggregation of supplied segment features and raw WAV spectral summaries, not a larger neural net.
+  - Add filtered-spectrogram image statistics and compare raw spectrogram vs filtered spectrogram feature blocks.
+  - Train a second GBDT family and a stronger linear family on identical folds. Keep every candidate only if its OOF blend contribution is positive.
+  - Tune per-species regularization and class weights for species with enough positives; keep global defaults for very rare classes to avoid fold overfit.
+  - Try rank averaging, logit averaging, and raw probability averaging. For AUC, rank averaging often improves robustness; raw averaging can be better if global score scale is evaluated.
+- Round 3:
+  - Train 2-3 compact spectrogram models for diversity:
+    - TimmSED EfficientNet-B0/B3-style model on log-mel;
+    - ConvNeXt/EfficientNet image classifier on filtered spectrogram BMPs;
+    - a simpler CNN trained from scratch if pretrained weights are unavailable.
+  - Use 10-second full-clip training as the default. Short random crops can miss sparse calls; if using crops, aggregate multiple crops at inference and preserve the recording-level label.
+  - Add time-shift TTA and average predictions over full clip, left/right shifted views, and possibly raw/filtered spectrogram variants.
+  - Build a level-2 stack from OOF predictions using strongly regularized logistic/ridge models per species. Compare against simple weighted blend; prefer the simpler blend when OOF gains are within noise.
+  - Try per-species monotonic transforms: power, logit scaling, or rank percentile mapping chosen on OOF. Keep only transforms that improve both flattened and class-wise AUC.
+- Late round:
+  - Multi-seed the strongest feature and spectrogram models, then blend by OOF hill climbing.
+  - Use snapshot/SWA-style neural checkpoints only after the neural validation curve is stable.
+  - Search blend weights with repeated folds or bootstrap OOF resampling to avoid choosing weights that exploit one small fold.
+  - If time remains, try a bag-level multi-instance model over segment instances: encode segments with a small MLP and aggregate by attention/max/mean per recording. This matches the data structure but is higher implementation risk than fixed aggregations.
+
+## 5. Validation and Metric Optimization
+- Use recording-level folds only. Never split segments, crops, or spectrogram windows from the same recording across train and validation.
+- Multi-label stratification is important because 19 species can be imbalanced and co-occur. The validation split should preserve:
+  - per-species positive counts;
+  - label cardinality per recording;
+  - rare species coverage in every fold where possible.
+- Track three OOF metrics:
+  - flattened ROC AUC over all recording/species pairs;
+  - mean per-species ROC AUC over species with validation positives and negatives;
+  - per-species AUC table to catch models that improve common/easy species while hurting rare ones.
+- Treat flattened AUC as the primary optimization target if it mirrors the competition scorer. Use mean per-species AUC as a guardrail against overfitting cross-class score scale.
+- AUC implications:
+  - do not tune thresholds for submission;
+  - do not optimize accuracy/F1 unless using them only for diagnostics;
+  - monotonic transforms within one species preserve that species' AUC, but can change flattened AUC by changing cross-species ordering;
+  - class prior offsets, logit scaling, and power transforms should be tuned on OOF predictions, not guessed.
+- For tiny data, validation noise is high. Compare experiments on identical folds and require consistent OOF improvement before changing the main route.
+- If local CV and leaderboard disagree:
+  - trust improvements that hold across multiple model families and folds;
+  - be skeptical of public leaderboard-only gains from aggressive class scaling or pseudo-labeling;
+  - prefer blends with stable OOF rankings over a single high-variance neural checkpoint.
+- Use OOF predictions for every metric-sensitive decision: feature inclusion, model family inclusion, blend weights, per-class transforms, pseudo-label thresholds, and final model selection.
+
+## 6. Model, Feature, and Preprocessing Priorities
+- Highest-value feature blocks:
+  - histogram-of-segments;
+  - aggregated 38-dimensional segment features;
+  - segment rectangle geometry and frequency/time occupancy;
+  - log-mel/MFCC/spectral summaries from raw WAV;
+  - filtered spectrogram summaries and denoised-vs-raw contrast features;
+  - label-count-aware and missing-segment indicators.
+- Highest-value models:
+  - per-species LightGBM with conservative depth/leaves and early stopping;
+  - standardized logistic/ridge one-vs-rest models;
+  - ExtraTrees/RandomForest for nonlinear diversity;
+  - XGBoost/CatBoost as secondary GBDT diversity;
+  - compact spectrogram CNN/SED as a blend component;
+  - small tabular MLP only after feature models are stable.
+- Spectrogram priorities:
+  - preserve short bird-call structure with adequate time resolution;
+  - include high-frequency content up to the clip Nyquist range;
+  - compare raw log-mel against provided filtered spectrograms;
+  - use per-sample normalization and noise-robust augmentations;
+  - avoid heavy image augmentations that destroy frequency/time semantics. Time masking and frequency masking are safer than arbitrary rotations/flips.
+- Multi-label loss priorities:
+  - BCEWithLogits as the default;
+  - focal BCE for severe imbalance if OOF improves;
+  - mixup labels remain multi-hot weighted sums and are not normalized to sum to one.
+- Ensembling priorities:
+  - same folds for all OOF candidates;
+  - rank blend plus raw probability blend candidates;
+  - nonnegative weights, preferably simple and robust;
+  - per-class weights only when validation positives are enough.
+
+## 7. Avoid or Delay
+- Avoid a pure deep-learning solution as the first and only plan. The labeled set is too small for a large neural model to be trusted without strong feature-model support.
+- Avoid treating the task as single-label multiclass. Multiple birds can vocalize in one clip, and softmax competition between species is metric-mismatched.
+- Avoid threshold tuning, hard labels, top-k labels, or count constraints for submission. AUC wants ranked continuous scores.
+- Avoid splitting segment instances, windows, or augmented crops independently across folds. That leaks recording identity and inflates CV.
+- Avoid large audio foundation models or external pretrained checkpoints as a default dependency unless they are already available in the runtime. They are high risk relative to supplied features.
+- Avoid external species-range metadata, manual relabeling, private labels, or external bird audio. The default medal route must use only competition-provided data.
+- Avoid aggressive pseudo-labeling before OOF validation, blending, and feature models are stable. On a tiny test set, pseudo-label errors can quickly become self-confirming.
+- Avoid overfitting per-species transformations for species with very few positives. Use global transforms or regularized class offsets unless OOF evidence is strong.
+- Avoid arbitrary spectrogram image augmentations such as vertical flips, large rotations, or color jitter copied from natural-image classification. Frequency direction is semantic, and time reversal should be validated rather than assumed.
+- Delay complex multi-instance neural attention over raw segments until fixed segment aggregations and GBDTs are exhausted. It is task-aligned but easier to overfit and harder to validate in a one-script setting.

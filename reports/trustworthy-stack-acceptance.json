@@ -1,0 +1,341 @@
+{
+  "verdict": "PASS",
+  "reviewed_base": "53a4462",
+  "research_tests": 402,
+  "new_module_mypy_files": 23,
+  "legacy_typecheck_baseline": {
+    "api_server": 7,
+    "task_dispatcher": 4,
+    "new_errors": 0
+  },
+  "real_boundary_checks_passed": 47,
+  "boundary": {
+    "containers": [
+      {
+        "service": "dispatcher",
+        "status": "running",
+        "mounts": [
+          {
+            "type": "bind",
+            "source": "<repo-root>/research",
+            "target": "/opt/rsi_repo/research",
+            "writable": false
+          },
+          {
+            "type": "bind",
+            "source": "<repo-root>/.runtime/rsi-trustworthy/worker_control_key",
+            "target": "/run/rsi_control/key",
+            "writable": false
+          },
+          {
+            "type": "bind",
+            "source": "<repo-root>/.runtime/rsi-trustworthy/storage",
+            "target": "/mnt/rsi_storage",
+            "writable": true
+          },
+          {
+            "type": "bind",
+            "source": "<repo-root>/.runtime/rsi-trustworthy/workdir",
+            "target": "/mnt/local_sandbox_workdir",
+            "writable": true
+          },
+          {
+            "type": "bind",
+            "source": "<repo-root>/sandbox-controller/task_dispatcher",
+            "target": "/app",
+            "writable": false
+          },
+          {
+            "type": "bind",
+            "source": "<repo-root>/deploy/rsi-trustworthy/config/sandbox_config.json",
+            "target": "/app/config/sandbox_config.json",
+            "writable": false
+          }
+        ],
+        "networks": [
+          "rsi-trustworthy_control",
+          "rsi-trustworthy_execution"
+        ],
+        "ports": {},
+        "privileged": false,
+        "cap_drop": null,
+        "cap_add": null,
+        "security_opt": null,
+        "memory": 0,
+        "nano_cpus": 0,
+        "pids": null,
+        "readonly_rootfs": false
+      },
+      {
+        "service": "nginx",
+        "status": "running",
+        "mounts": [
+          {
+            "type": "bind",
+            "source": "<repo-root>/deploy/rsi-trustworthy/nginx/nginx-main.conf",
+            "target": "/etc/nginx/nginx.conf",
+            "writable": false
+          },
+          {
+            "type": "bind",
+            "source": "<repo-root>/deploy/rsi-trustworthy/nginx/nginx.conf",
+            "target": "/etc/nginx/conf.d/default.conf",
+            "writable": false
+          }
+        ],
+        "networks": [
+          "rsi-trustworthy_control",
+          "rsi-trustworthy_edge"
+        ],
+        "ports": {
+          "80/tcp": [
+            {
+              "HostIp": "127.0.0.1",
+              "HostPort": "6581"
+            }
+          ]
+        },
+        "privileged": false,
+        "cap_drop": null,
+        "cap_add": null,
+        "security_opt": null,
+        "memory": 0,
+        "nano_cpus": 0,
+        "pids": null,
+        "readonly_rootfs": false
+      },
+      {
+        "service": "api",
+        "status": "running",
+        "mounts": [
+          {
+            "type": "bind",
+            "source": "<repo-root>/sandbox-controller/api_server",
+            "target": "/app",
+            "writable": false
+          },
+          {
+            "type": "bind",
+            "source": "<repo-root>/research",
+            "target": "/opt/rsi_repo/research",
+            "writable": false
+          },
+          {
+            "type": "bind",
+            "source": "<repo-root>/.runtime/rsi-trustworthy/storage",
+            "target": "/mnt/rsi_storage",
+            "writable": true
+          }
+        ],
+        "networks": [
+          "rsi-trustworthy_control"
+        ],
+        "ports": {},
+        "privileged": false,
+        "cap_drop": null,
+        "cap_add": null,
+        "security_opt": null,
+        "memory": 0,
+        "nano_cpus": 0,
+        "pids": null,
+        "readonly_rootfs": false
+      },
+      {
+        "service": "worker",
+        "status": "running",
+        "mounts": [
+          {
+            "type": "bind",
+            "source": "<repo-root>/.runtime/rsi-trustworthy/storage/mlsandbox/jobs",
+            "target": "/mnt/rsi_storage/mlsandbox/jobs",
+            "writable": false
+          },
+          {
+            "type": "bind",
+            "source": "<repo-root>/.runtime/rsi-trustworthy/storage/mlsandbox/uploads",
+            "target": "/mnt/rsi_storage/mlsandbox/uploads",
+            "writable": false
+          },
+          {
+            "type": "bind",
+            "source": "<repo-root>/.runtime/rsi-trustworthy/workdir",
+            "target": "/mnt/local_sandbox_workdir",
+            "writable": true
+          },
+          {
+            "type": "bind",
+            "source": "<repo-root>/deploy/rsi-trustworthy/worker/minimal_worker.py",
+            "target": "/opt/rsi_worker/minimal_worker.py",
+            "writable": false
+          },
+          {
+            "type": "bind",
+            "source": "<repo-root>/.runtime/rsi-trustworthy/worker_control_key",
+            "target": "/run/rsi_control/key",
+            "writable": false
+          }
+        ],
+        "networks": [
+          "rsi-trustworthy_execution"
+        ],
+        "ports": {},
+        "privileged": false,
+        "cap_drop": [
+          "ALL"
+        ],
+        "cap_add": [
+          "CAP_KILL",
+          "CAP_SETGID",
+          "CAP_SETUID"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "memory": 4294967296,
+        "nano_cpus": 2000000000,
+        "pids": 128,
+        "readonly_rootfs": true,
+        "environment_names": [
+          "RSI_WORKER_CANDIDATE_GID",
+          "RSI_WORKER_CONTROL_KEY_FILE",
+          "PYTHONDONTWRITEBYTECODE",
+          "RSI_WORKER_HOST",
+          "RSI_WORKER_PORT",
+          "RSI_WORKER_CONTAINER",
+          "RSI_WORKER_CANDIDATE_UID",
+          "PATH",
+          "DEBIAN_FRONTEND",
+          "USER",
+          "USER_UID",
+          "USER_GID",
+          "DISPLAY",
+          "DISPLAY_WIDTH",
+          "DISPLAY_HEIGHT",
+          "DISPLAY_DEPTH",
+          "XDG_RUNTIME_DIR",
+          "BROWSER_EXECUTABLE_PATH",
+          "BROWSER_REMOTE_DEBUGGING_PORT",
+          "BROWSER_COMMANDLINE_ARGS",
+          "BROWSER_EXTRA_ARGS",
+          "DNS_OVER_HTTPS_TEMPLATES",
+          "LOG_DIR",
+          "JWT_PUBLIC_KEY",
+          "VNC_SERVER_PORT",
+          "WEBSOCKET_PROXY_PORT",
+          "GEM_SERVER_PORT",
+          "MCP_SERVER_PORT",
+          "PUBLIC_PORT",
+          "AUTH_BACKEND_PORT",
+          "WAIT_PORTS",
+          "WAIT_TIMEOUT",
+          "WAIT_INTERVAL",
+          "MCP_HUB_PORT",
+          "SANDBOX_SRV_PORT",
+          "JUPYTER_LAB_PORT",
+          "CODE_SERVER_PORT",
+          "MCP_SERVER_BROWSER_PORT",
+          "TINYPROXY_PORT",
+          "MCP_SERVER_CHROME_DEVTOOLS_PORT",
+          "MAX_SHELL_SESSIONS",
+          "LANG",
+          "TZ",
+          "LANGUAGE",
+          "LC_ALL",
+          "PUPPETEER_EXECUTABLE_PATH",
+          "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD",
+          "BROWSER_NO_SANDBOX",
+          "BROWSER_USER_AGENT",
+          "UV_TOOL_BIN_DIR",
+          "UV_TOOL_DIR",
+          "XLA_FLAGS"
+        ]
+      },
+      {
+        "service": "postgres",
+        "status": "running",
+        "mounts": [
+          {
+            "type": "volume",
+            "source": "/var/lib/docker/volumes/rsi-trustworthy_rsi_postgres_data/_data",
+            "target": "/var/lib/postgresql/data",
+            "writable": true
+          },
+          {
+            "type": "bind",
+            "source": "/run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/Ubuntu/131315f83e24452b304a82e9853684cfebaccd64396110eaf9099b93cc9b9d77",
+            "target": "/docker-entrypoint-initdb.d",
+            "writable": false
+          }
+        ],
+        "networks": [
+          "rsi-trustworthy_control"
+        ],
+        "ports": {},
+        "privileged": false,
+        "cap_drop": null,
+        "cap_add": null,
+        "security_opt": null,
+        "memory": 0,
+        "nano_cpus": 0,
+        "pids": null,
+        "readonly_rootfs": false
+      },
+      {
+        "service": "redis",
+        "status": "running",
+        "mounts": [
+          {
+            "type": "volume",
+            "source": "/var/lib/docker/volumes/34beb087389a8348f06fa59dd6fbc8761b0e2c11195659de17a80d0cc6b9765e/_data",
+            "target": "/data",
+            "writable": true
+          }
+        ],
+        "networks": [
+          "rsi-trustworthy_control"
+        ],
+        "ports": {},
+        "privileged": false,
+        "cap_drop": null,
+        "cap_add": null,
+        "security_opt": null,
+        "memory": 0,
+        "nano_cpus": 0,
+        "pids": null,
+        "readonly_rootfs": false
+      }
+    ],
+    "issues": []
+  },
+  "single_cpu_gpu_slot": {
+    "cpu": {
+      "completed_at": "2026-10-07T19:54:15.763332Z",
+      "job_id": "job_51267a1bcc8b4d0d",
+      "score": 0.55,
+      "started_at": "2026-10-07T19:54:09.589963Z",
+      "status": "completed"
+    },
+    "gpu": {
+      "completed_at": "2026-10-07T19:54:22.912980Z",
+      "job_id": "job_aa207930497d4158",
+      "score": 0.55,
+      "started_at": "2026-10-07T19:54:15.940824Z",
+      "status": "completed"
+    },
+    "intervals_disjoint": true
+  },
+  "nonroot_gpu_job": "job_91274cb9176348c4",
+  "model_acceptance_requests": 0,
+  "repairs": [
+    "authenticated control API",
+    "unprivileged candidate UID with zero effective capabilities",
+    "read-only rootfs and isolated internal execution network",
+    "candidate-only adopted-child reaping",
+    "failed cleanup never succeeds or releases execution slot",
+    "C-level subprocess privilege setup",
+    "API entrypoint hashes match actual staged bytes",
+    "new nonroot scratch subtree preserves earlier artifacts",
+    "serial model transport guard; over-reservation usage stops"
+  ],
+  "implementation_commit": "7036780"
+}

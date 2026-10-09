@@ -1,0 +1,19 @@
+{
+  "trees": [
+    {
+      "name": "openrsi-wsl",
+      "root": ".",
+      "note": "this repository; root resolves relative to the repo"
+    },
+    {
+      "name": "rsi-gpu-legacy",
+      "root": "<legacy-root>",
+      "note": "legacy GPU algorithms tree; READ-ONLY source of consolidated copies"
+    },
+    {
+      "name": "windows-deployed",
+      "root": "<local-workspace>/openrsi-migration-20260929",
+      "note": "live Windows deployment bind-mount source; READ-ONLY, rollback only"
+    }
+  ]
+}

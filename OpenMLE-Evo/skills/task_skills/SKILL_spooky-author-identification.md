@@ -1,0 +1,182 @@
+# Skill: spooky-author-identification
+
+## 1. Task-Specific Reading
+- Predict the author of short horror-fiction excerpts among exactly three classes: `EAP`, `HPL`, and `MWS`.
+- This is multiclass single-label text classification. Each row has one true author, but the submission is judged on class probabilities, not hard labels.
+- The metric is multiclass logarithmic loss:
+  - Optimize probability assigned to the true author.
+  - Use `CrossEntropyLoss` or probabilistic linear models that produce calibrated class probabilities.
+  - Avoid argmax-only outputs, uncalibrated margins, or overconfident one-hot-like predictions.
+  - Ensure each row behaves like a probability distribution even if scoring rescales rows.
+- The text is sentence-level literary prose produced by sentence tokenization, so many examples are short and style-heavy rather than topic-rich.
+- Modality is plain English text only. There is no metadata that should dominate modeling.
+- Dominant score levers:
+  - Character n-grams for spelling, affixes, punctuation, archaic forms, author-specific orthography, and short-sentence robustness.
+  - Word n-grams for author-specific vocabulary, named entities, phrase rhythm, function-word use, and horror-domain diction.
+  - Well-calibrated sparse linear models as primary models, not throwaway starters.
+  - OOF-validated probability blending across feature views and model families.
+  - Minimal preprocessing that preserves case, punctuation, quotes, apostrophes, semicolons, dashes, and unusual tokens.
+  - Conservative transformer use as a diversity model, not a replacement for the sparse/stylometric core.
+
+## 2. Highest-Expected-Score Strategy
+- Converge toward a compact authorship-attribution ensemble optimized directly for multiclass log loss.
+- Make the sparse n-gram branch the center of the solution:
+  - Train multinomial logistic regression on combined word and character TF-IDF.
+  - Add NB-SVM/log-count-ratio style features for one-vs-rest author contrasts.
+  - Add at least two genuinely different vectorizer views: word-heavy, char-heavy, and mixed raw/case variants.
+  - Use OOF predictions from each branch and blend probabilities by minimizing OOF log loss.
+- Treat character modeling as first-class:
+  - Use `char` n-grams and `char_wb` n-grams; they capture different boundaries.
+  - Include ranges around `(2, 5)`, `(3, 6)`, and possibly `(4, 7)`.
+  - Preserve punctuation and casing in at least one char view. Authorship signal often lives in punctuation rhythm and exact surface form.
+- Use word-level models for semantic and lexical author cues:
+  - Word unigrams through trigrams are the default.
+  - Try word `(1, 4)` only if feature count and regularization remain stable; short excerpts can benefit from author-specific phrases, but high-order word n-grams overfit quickly.
+  - Keep rare words more often than in generic classification. Rare archaic or named terms can be discriminative here, so `min_df=1` or `2` should be tested against stronger regularization rather than discarded automatically.
+- Add a small stylometric branch only if it improves OOF:
+  - Length, word count, average word length, unique-token ratio.
+  - Counts/ratios of commas, semicolons, colons, dashes, quotes, exclamation/question marks, parentheses, apostrophes, uppercase letters, digits.
+  - Function-word or stopword ratios if implemented cleanly from local libraries.
+  - Feed these either to a small logistic/GBDT model or use them as features in a simple stacker with OOF base predictions.
+- Add transformers after the sparse ensemble is stable:
+  - Use a strong English encoder such as DeBERTa-v3-base/large or ModernBERT-base/large if available in the execution environment.
+  - Train with multiclass CE on raw text and short max length, likely 96-160 tokens after length analysis.
+  - Transformers may help context and semantic phrasing, but for short public-domain author attribution they can be less direct than n-grams; include them only when OOF log loss supports the blend.
+- Final high-score endpoint:
+  - 5- or 10-fold stratified OOF pipeline.
+  - Several calibrated sparse models with distinct word/char/preprocessing views.
+  - Optional DeBERTa/ModernBERT fold ensemble.
+  - OOF log-loss-optimized blend weights.
+  - Mild probability calibration/temperature scaling if it improves OOF log loss without hurting fold stability.
+
+## 3. Strong First Implementation Plan
+- Build the first complete solution around a serious sparse probability ensemble.
+- Data representation:
+  - Target: encode `EAP`, `HPL`, `MWS` in the exact submission class order.
+  - Input: use the `text` field only.
+  - Keep a raw-text version and a lightly normalized version. Normalization should be limited to string conversion, whitespace collapse, and optional Unicode normalization for vectorizers.
+  - Do not lowercase every view. Use both lowercase word features and case-preserving character features.
+- Validation:
+  - Use shuffled stratified 5-fold CV by author for iteration.
+  - Store OOF predicted probabilities with shape `(n_train, 3)`.
+  - Score every branch with multiclass log loss on OOF probabilities.
+  - Track per-class log loss or confusion to identify author pairs that need extra features.
+- First sparse branches:
+  - Branch A, mixed TF-IDF logistic:
+    - Word TF-IDF `(1, 3)`, `sublinear_tf=True`, moderate feature cap.
+    - Character TF-IDF `char_wb` `(3, 6)`, high feature cap.
+    - Horizontally stack both and train multinomial `LogisticRegression` with tuned `C`.
+  - Branch B, raw character logistic:
+    - `analyzer='char'`, n-grams around `(2, 5)` or `(3, 7)`.
+    - Preserve punctuation and case if possible.
+    - Train multinomial logistic regression with a different `C` from Branch A.
+  - Branch C, NB/log-count-ratio:
+    - Build binary/count or TF-IDF features from word and char views.
+    - For each class versus rest, compute smoothed log-count ratios and reweight features.
+    - Fit logistic regression to get class probabilities, then normalize rows.
+  - Optional Branch D:
+    - MultinomialNB or ComplementNB on count/TF-IDF features as a small calibrated-diversity member.
+    - Include only if OOF blend improves; standalone score need not beat logistic.
+- Hyperparameters:
+  - Test a compact `C` grid such as `0.5, 1, 2, 4, 8, 16`.
+  - Prefer enough `max_iter` for convergence; probability quality suffers when linear models stop early.
+  - Compare `solver='lbfgs'` and `saga` only if needed; the model choice matters less than feature view and calibration.
+- Inference:
+  - Average test probabilities across folds for each branch.
+  - Blend branch predictions using OOF log-loss minimization or a small manual weight search.
+  - Clip only lightly for numeric stability after blending, and renormalize rows. Excessive clipping masks useful confidence.
+- This first implementation should already be high-performing: n-gram diversity, stratified OOF, calibrated probability blending, and log-loss selection are the core of this competition.
+
+## 4. High-ROI Upgrades Across Rounds
+- Round 2:
+  - Tune vectorizer views before adding heavy neural components.
+  - Compare word `(1, 2)`, `(1, 3)`, `(1, 4)`; char `(2, 5)`, `(3, 5)`, `(3, 6)`, `(4, 7)`; `char` versus `char_wb`.
+  - Search `min_df` and `max_features` jointly with logistic `C`. Do not remove rare terms blindly; compensate with stronger regularization.
+  - Add separate lowercase and case-preserving pipelines. Word features often benefit from lowercasing; punctuation/case-sensitive char features often should not.
+  - Add simple stylometric features and test them as:
+    - direct dense append to sparse features if scaled properly,
+    - a small separate logistic/GBDT branch,
+    - or second-level stacker inputs with OOF base probabilities.
+  - Optimize blend weights on OOF log loss with nonnegative weights. Keep the ensemble small and diverse.
+- Round 3:
+  - Add one transformer branch if a suitable checkpoint is available and time permits.
+  - Use raw text, minimal cleaning, multiclass CE, mixed precision, 3-5 folds, and early stopping by validation log loss.
+  - Start with max length near 128 because the data is sentence-level; increase only if length distribution shows meaningful truncation.
+  - Try DeBERTa-v3-base first for speed, then DeBERTa-v3-large or ModernBERT-large if the checkpoint and budget are available.
+  - Use small learning rates, weight decay, dropout, and possibly multi-sample dropout. Avoid long training that memorizes author-specific rare phrases.
+  - Blend transformer probabilities with sparse OOF predictions. Give it weight only if it reduces OOF log loss; it may be a useful diversity component even when not best standalone.
+- Late round:
+  - Increase CV stability with 10-fold sparse models or repeated 5-fold seeds.
+  - Use temperature scaling or calibration on OOF predictions per model family if it consistently reduces log loss.
+  - Try a regularized second-level logistic stacker on OOF predictions plus a few stylometric features. Compare against simple weighted averaging because stackers can overfit small text data.
+  - Try soft pseudo-labeling on test only after a strong OOF blend exists. Use soft probabilities and low weight; hard pseudo-labels are risky under log loss.
+  - Add a second transformer architecture only if its OOF errors differ from the first transformer and the sparse ensemble.
+  - Consider self-distillation or training on OOF soft labels only as a final calibration/regularization experiment, not a core dependency.
+
+## 5. Validation and Metric Optimization
+- Use stratified folds by author as the primary validation design.
+- Prefer 5 folds for fast iteration and 10 folds or repeated seeds for final sparse ensembles.
+- Because the examples are sentence chunks from larger works but no reliable source-document group is provided in the task fields, do not invent groups. Stratified random OOF is the most practical validation; use leaderboard only as a distribution sanity check, not as the main optimizer.
+- The model-selection metric is OOF multiclass log loss:
+  - Evaluate on probability arrays, not class labels.
+  - Always normalize rows after model blending.
+  - For linear SVM-like models, calibrate or convert to probabilities before scoring; raw margins are metric-mismatched.
+- Log loss implications:
+  - Correct ranking is insufficient; probability magnitude matters.
+  - Overconfident wrong predictions are heavily punished.
+  - Calibration often matters as much as a small accuracy improvement.
+  - Label smoothing, temperature scaling, and conservative blending can improve score even when argmax accuracy is unchanged.
+- Trust hierarchy:
+  - Trust fold-stable OOF log-loss improvements from distinct feature/model changes.
+  - Trust blend improvements more when each base branch has low correlation or different per-class error patterns.
+  - Be skeptical of tiny OOF gains from many near-duplicate vectorizers; they often disappear.
+  - If public leaderboard and CV diverge, first inspect calibration, row normalization, class-order mapping, and whether a model is overfitting rare phrases. Do not chase leaderboard noise with unvalidated weights.
+- Use OOF predictions for:
+  - Blend-weight optimization.
+  - Temperature scaling.
+  - Per-class error analysis.
+  - Deciding whether transformer or stylometric branches deserve final weight.
+
+## 6. Model, Feature, and Preprocessing Priorities
+- Highest-priority models:
+  - Multinomial logistic regression on combined word and character TF-IDF.
+  - Character-only logistic regression with a different analyzer/range.
+  - NB-SVM/log-count-ratio logistic models for class-vs-rest author contrasts.
+  - MultinomialNB or ComplementNB as a lightweight diversity model if OOF blend-positive.
+  - One transformer encoder as a later diversity member.
+- Highest-priority features:
+  - Word n-grams: author vocabulary, multiword turns of phrase, names, archaic expressions, function-word sequences.
+  - Character n-grams: suffixes, prefixes, contractions, spelling patterns, punctuation rhythm, quotes, apostrophes, hyphenation, semicolons.
+  - Raw and lightly normalized text variants.
+  - Case-preserving features for punctuation/capitalization style.
+  - Stylometric dense features only after strong sparse features are in place.
+- Preprocessing priorities:
+  - Preserve punctuation, casing, quotation marks, apostrophes, hyphens, semicolons, and unusual spellings.
+  - Collapse broken whitespace and handle missing text defensively, but do not sanitize away literary style.
+  - Avoid stemming and lemmatization as defaults; exact forms are author signal.
+  - Avoid stopword removal. Function words are central to authorship attribution.
+  - Compare lowercase versus raw views rather than choosing one globally.
+- Training priorities:
+  - Optimize probability quality, not only accuracy.
+  - Tune regularization jointly with feature count.
+  - Favor stable OOF log-loss reductions over complex model additions.
+  - Keep every ensemble component distinct in feature view, preprocessing, model family, or seed.
+
+## 7. Avoid or Delay
+- Avoid transformer-only first solutions. A modern encoder is useful, but this task’s strongest signal is often surface-level authorship style captured by sparse n-grams.
+- Avoid aggressive cleaning:
+  - Do not remove punctuation, quotes, apostrophes, semicolons, dashes, casing, stopwords, or rare archaic words.
+  - Do not stem, lemmatize, or normalize all words into generic forms by default.
+  - Do not discard short or odd tokenizer fragments; the dataset explicitly contains occasional non-sentence chunks.
+- Avoid metric-mismatched outputs:
+  - No hard labels.
+  - No uncalibrated decision scores.
+  - No one-hot predictions.
+  - No threshold tuning as a core step.
+- Avoid broad external-data dependence as the default plan. The legitimate default should use the provided train/test text only.
+- Avoid overfitted model zoos:
+  - Many tiny vectorizer variations can overfit OOF blend weights.
+  - Prefer a few diverse, well-calibrated branches.
+- Avoid leakage-prone assumptions about source works or hidden grouping not present in the task fields.
+- Delay pseudo-labeling, stacking, domain-adaptive MLM, adversarial training, and multi-transformer ensembles until the sparse OOF ensemble is strong and stable.
+- Delay complex handcrafted feature sets unless they target authorship style directly and improve OOF log loss.

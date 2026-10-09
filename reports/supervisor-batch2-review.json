@@ -1,0 +1,22 @@
+{
+  "reviewed_commit": "be68d71",
+  "research_tests_after_supervisor_fixes": 330,
+  "model_acceptance_requests": 0,
+  "fixed": [
+    "strict numeric budget validation",
+    "persist lowered limits",
+    "malformed usage retains and stops",
+    "prediction descriptor reads with bounds and strict CSV",
+    "bounded immutable source capture including assets"
+  ],
+  "remaining": {
+    "US-004": "API still relocates before checking instead of materializing the captured bytes. Wire source_snapshot into admission and both common clients.",
+    "US-006": "Actual Docker probes: unauthenticated worker-local caller launched a process; detached child survived session DELETE and wrote a synthetic marker. Probe sessions/markers cleaned and bounded children exited."
+  },
+  "temporary_copy_verification": {
+    "budget_tests": 55,
+    "evaluator_tests": 44,
+    "source_tests": 61
+  },
+  "legacy_stack": "all six containers still running; original GPU worker healthy"
+}

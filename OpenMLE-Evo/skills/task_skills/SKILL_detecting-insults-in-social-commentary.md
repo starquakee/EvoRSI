@@ -1,0 +1,168 @@
+# Skill: detecting-insults-in-social-commentary
+
+## 1. Task-Specific Reading
+- Predict whether a short user-generated comment is an insult directed at another conversation participant.
+- This is binary text classification with one probability score per test row. The target is `1` for insult and `0` for neutral/non-insult.
+- The metric is ROC AUC, so the solver must optimize ranking of insulting comments above neutral comments. Thresholds, hard labels, prevalence matching, and accuracy are secondary or irrelevant.
+- The input has two useful fields:
+  - Comment text: dominant signal. Mostly English social/forum text with profanity, slurs, capitalization, misspellings, quoted text, formatting artifacts, and creative punctuation.
+  - Timestamp: optional weak metadata. It may encode source/time sampling effects, but should never dominate because the final evaluation emphasizes generalization.
+- The labeling guideline matters: profanity alone is not always an insult, and insults may lack profanity. Models need both direct lexical cues and phrase/context cues such as second-person attacks, imperatives, dismissive constructions, and participant-directed abuse.
+- The task is small/noisy enough that overfitting is a major risk. The strongest route is not a giant transformer-only script; it is an OOF-validated text-ranking ensemble centered on sparse lexical models, with a neural encoder added only if it improves validation.
+- Dominant score levers:
+  - Character n-grams for obfuscated insults, misspellings, spacing, repeated punctuation, masked profanity, and casing variants.
+  - Word n-grams for insult phrases, second-person patterns, profanity contexts, and multiword abusive expressions.
+  - NB-SVM/log-count-ratio features and strongly regularized logistic classifiers for robust sparse ranking.
+  - Stratified OOF validation scored by ROC AUC, with fold-level stability checks.
+  - Conservative cleaning: fix broken whitespace/encoding, but preserve the exact surface forms that carry insult signal.
+  - Small diverse blends, not many near-duplicate high-variance models.
+
+## 2. Highest-Expected-Score Strategy
+- Converge toward a compact ensemble optimized directly for OOF ROC AUC:
+  - Multiple sparse feature views from raw comments: word TF-IDF, character TF-IDF, binary count features, and NB-SVM transformed features.
+  - Regularized one-vs-rest binary classifiers, mainly logistic regression or linear SVM-style models with probability-like decision scores.
+  - Optional metadata/stylometric features only as low-weight stacker inputs, not as the core representation.
+  - Optional transformer encoder fold ensemble as a semantic complement, blended only when OOF AUC improves.
+- Treat sparse models as the primary high-score route. This competition’s signal is short, lexical, adversarial-ish social language where exact forms matter. Linear models over high-order word and character n-grams can rank very well, train fast, and give reliable OOF comparisons.
+- Use at least three distinct sparse views:
+  - Word TF-IDF: `ngram_range=(1,2)` and `(1,3)` variants, sublinear TF, unicode accent stripping, moderate `min_df`, large enough feature cap.
+  - Character TF-IDF: `char` and/or `char_wb`, usually `ngram_range=(2,5)`, `(3,6)`, or `(2,6)`. This is essential; do not omit it.
+  - NB-SVM/log-count-ratio: smoothed positive/negative token ratios applied to count or TF-IDF features, then fitted with logistic regression. This often improves toxic/insult text ranking because rare abusive terms and phrase fragments get strong discriminative weights.
+- Use the timestamp cautiously:
+  - Extract hour/day/month only as optional metadata for a very regularized model or stacker.
+  - Do not allow date/time artifacts to override text because final scoring may use a broader verification distribution.
+  - Include timestamp features only if OOF AUC improves across folds and does not create suspicious fold variance.
+- Neural route:
+  - If pretrained checkpoints are available, try an English encoder such as DeBERTa-v3-base/large or ModernBERT-base/large after the sparse pipeline is stable.
+  - Use a single sigmoid output with `BCEWithLogitsLoss`, max length around 128-256 first, and raw/lightly normalized text.
+  - Transformers help semantic cases: insults without obvious profanity, profanity used non-insultingly, and phrases where target-directedness matters.
+  - Transformers are ensemble members, not automatic replacements. Sparse char/word models often retain orthogonal signal.
+- Final high-score endpoint:
+  - 5-fold OOF sparse ensemble with word, char, and NB-SVM variants.
+  - OOF-optimized blend weights or rank averaging.
+  - Optional 3-5 fold transformer predictions blended at modest weight if they add stable AUC.
+  - Final probabilities in `[0,1]` with preserved ranking; no thresholding.
+
+## 3. Strong First Implementation Plan
+- Build the first script around a serious sparse AUC ensemble. This is the best first-round tradeoff between score, reliability, and implementation risk.
+- Text preparation:
+  - Parse comments as text and preserve the raw wording as much as possible.
+  - Normalize only whitespace, nulls, obvious quote/escape artifacts, and optionally unicode accents through vectorizer settings.
+  - Do not remove profanity, punctuation, casing, repeated letters, short comments, URLs, slurs, or unusual spellings. They are predictive.
+  - Maintain two text variants if easy: raw-ish text for character features, lightly lowercased/normalized text for word features.
+- Feature views:
+  - Main word TF-IDF: unigrams through trigrams, `sublinear_tf=True`, `strip_accents='unicode'`, `min_df` around 2, high feature cap.
+  - Main char TF-IDF: `analyzer='char_wb'`, n-grams 3-6, high feature cap.
+  - Diversity char TF-IDF: `analyzer='char'`, n-grams 2-5 or 2-6, to capture punctuation and cross-word artifacts.
+  - NB-SVM count view: binary word/char counts or TF-IDF, smoothed log-count ratio by class, then logistic regression.
+  - Optional numeric features: text length, word count, unique word ratio, uppercase ratio, exclamation/question counts, profanity-like punctuation density, quote count, and timestamp-derived hour/day. Use these only in a small dense model or append to sparse features with care; they are lower value than n-grams.
+- Models:
+  - Train logistic regression on combined word+char TF-IDF. Use strong regularization search around `C=0.25, 0.5, 1, 2, 4, 8`.
+  - Train one NB-SVM-style logistic model using label-specific log-count ratios.
+  - Optionally train a calibrated linear SVM or ridge classifier as a diversity member; convert margins to probability-like scores for blending.
+  - Consider `class_weight='balanced'` as a fold-validated option, not a default. It can improve ranking of positives but can also over-amplify profanity-heavy false positives.
+- Training target/loss:
+  - Single binary target.
+  - Logistic loss or linear-margin objectives are appropriate; select by OOF ROC AUC, not logloss.
+  - Do not tune classification thresholds.
+- Validation:
+  - Use deterministic stratified 5-fold CV on the binary label.
+  - Store OOF predictions for every model variant.
+  - Compute overall OOF ROC AUC and per-fold AUC; prefer settings that improve mean AUC without creating one unstable fold.
+  - If duplicates or near-duplicates exist, inspect whether they are label-consistent. Do not let exact duplicate text with conflicting labels dominate; consider a conservative dedup/soft-target experiment only if OOF shows label noise.
+- Inference and blending:
+  - Average fold predictions for each model family.
+  - Blend model families using OOF-optimized nonnegative weights.
+  - If scales differ strongly, use rank averaging or label-wise monotonic normalization before blending.
+  - Keep final values bounded in `[0,1]`; clipping only for numeric sanity, not as a ranking strategy.
+
+## 4. High-ROI Upgrades Across Rounds
+- Round 2:
+  - Tune sparse feature extraction aggressively:
+    - Word `(1,2)` vs `(1,3)`; `min_df=1,2,3,5`; lowercasing on/off.
+    - Char `char` vs `char_wb`; `(2,5)`, `(3,5)`, `(3,6)`, `(2,6)`.
+    - Binary counts vs TF-IDF for NB-SVM ratios.
+  - Tune `C` per feature family. A combined word+char model and an NB-SVM model often want different regularization.
+  - Add a second logistic model with a deliberately different vectorizer, not a tiny parameter variation.
+  - Optimize sparse blend weights on OOF AUC. Start with simple grid/nonnegative weights; avoid overfitting many components.
+  - Audit high-confidence OOF errors to decide whether cleaning hurts, whether profanity false positives are common, and whether second-person or quote patterns need more word n-gram coverage.
+- Round 3:
+  - Add one transformer encoder if feasible:
+    - Start with DeBERTa-v3-base or ModernBERT-base for speed; use large variants only if checkpoint availability and time are comfortable.
+    - Train 3-5 folds with sigmoid binary head, `BCEWithLogitsLoss`, mixed precision, warmup, and early stopping by validation AUC.
+    - Use max length 128-256 first. Increase to 384/512 only if many comments are truncated and OOF improves.
+    - Use minimal text cleaning. Let the tokenizer see punctuation, casing, and odd forms.
+  - Blend transformer predictions with sparse OOF. Give the transformer weight only where it improves OOF ranking; sparse models should usually remain the majority signal.
+  - Try multi-sample dropout or mean pooling for the transformer head if it is easy and stable.
+  - Try repeated CV seeds for the best sparse settings if variance is high.
+- Late round:
+  - Use soft pseudo-labeling only after a strong OOF ensemble exists. Add test examples with soft probabilities at low weight and compare OOF-like proxy behavior carefully; hard pseudo-labels are risky.
+  - Try a very regularized meta-model on OOF base predictions plus a few numeric text features. Compare against simple weighted/rank averaging; stacking can overfit small AUC differences.
+  - Add a second neural architecture only if the first transformer genuinely improves OOF and has different errors from sparse models.
+  - Experiment with domain-adaptive MLM on train+test text only if the solution can afford it and the transformer is already useful. Treat it as a late neural upgrade, not a core dependency.
+  - Consider label-noise mitigation: downweight or soft-label OOF-disagreed samples, but only after multiple independent models identify the same suspicious rows.
+
+## 5. Validation and Metric Optimization
+- Primary validation metric is OOF ROC AUC:
+  - Compute AUC from continuous scores, not rounded predictions.
+  - Track fold AUCs and their spread. A small mean gain with large fold instability is less trustworthy than a stable improvement.
+  - Use the same validation protocol for all model variants to make blend decisions comparable.
+- Split strategy:
+  - Use stratified 5-fold CV by label as the default.
+  - Keep folds deterministic for model selection; use repeated folds only after the pipeline is stable.
+  - If exact duplicate comments appear across rows, check fold leakage risk. For conservative generalization, consider grouping exact normalized text so duplicates do not inflate validation, but validate that grouping does not make folds too noisy.
+  - Do not use timestamp-based validation as the only split. It may be informative as a stress test, but the main final distribution is broad and the label is semantic.
+- Metric-aligned behavior:
+  - AUC rewards ordering. Any monotonic transform of one model’s scores leaves its AUC unchanged, but blending can change ordering, so optimize blends on OOF.
+  - Do not tune thresholds, F1, precision, recall, or accuracy for submission behavior.
+  - Calibration is useful only insofar as it makes blends more stable. AUC does not require perfectly calibrated probabilities.
+  - Rank averaging is strong when combining logistic probabilities, SVM margins, transformer logits, and NB-SVM outputs with different score scales.
+  - Avoid aggressive clipping, prevalence scaling, or pushing probabilities to 0/1. Extreme scores can hurt blend ranking and are not needed for AUC.
+- Trust hierarchy:
+  - Trust OOF gains that are stable across folds and robust to small vectorizer/model changes.
+  - Treat public leaderboard movement as noisy because the task warns about overfitting and a broader final verification set.
+  - When CV and leaderboard disagree, prefer the model with better fold stability, less timestamp dependence, and better error behavior on ambiguous profanity/non-insult cases.
+
+## 6. Model, Feature, and Preprocessing Priorities
+- Highest-value features:
+  - Character n-grams for obfuscated insults, masked profanity, punctuation, repeated letters, and creative spelling.
+  - Word n-grams for direct insult phrases, second-person attacks, dismissive constructions, and profanity context.
+  - NB-SVM log-count ratios for sparse discriminative terms.
+  - Raw surface-form features: casing, repeated symbols, short aggressive comments, and quote/response markers.
+  - Timestamp features only as weak optional metadata.
+- Highest-value models:
+  - Logistic regression on combined word+char TF-IDF.
+  - NB-SVM-style logistic regression on count/TF-IDF views.
+  - A second linear sparse model with intentionally different n-gram/analyzer choices.
+  - DeBERTa-v3 or ModernBERT encoder as a neural complement if available and OOF-positive.
+- Preprocessing priorities:
+  - Preserve insulting lexical forms and punctuation.
+  - Normalize whitespace and encoding artifacts enough that tokenization/vectorization is consistent.
+  - Compare lowercased word features against case-preserving variants; keep whichever improves OOF.
+  - Use char features to absorb misspellings instead of trying to hand-normalize every abusive variant.
+  - Avoid stemming/lemmatization by default; exact word forms and fragments are useful.
+- Ensemble priorities:
+  - Average folds within each model first.
+  - Blend distinct feature/model families, not many nearly identical copies.
+  - Use OOF predictions to choose blend weights.
+  - Prefer rank averaging when calibration mismatch is obvious.
+
+## 7. Avoid or Delay
+- Avoid transformer-only first solutions. They may be strong, but they are slower, more fragile under small data, and can miss the sparse lexical advantage.
+- Avoid weak unigram-only baselines as the final intended route. Character n-grams and NB-SVM-style ratios are central to high performance here.
+- Avoid aggressive text cleaning:
+  - Do not remove profanity, slurs, punctuation, all caps, repeated letters, URLs, quotes, or short comments as default preprocessing.
+  - Do not replace offensive words with a generic token; exact identity and spelling variants matter.
+  - Do not collapse all punctuation or repeated characters before char n-gram extraction.
+- Avoid metric-mismatched optimization:
+  - No threshold tuning for the submitted score.
+  - No accuracy/F1-driven model selection.
+  - No hard 0/1 predictions.
+  - No prevalence matching unless it improves OOF AUC, which is unlikely.
+- Avoid leakage-prone or brittle validation:
+  - Do not trust a single random holdout when full OOF CV is feasible.
+  - Do not let timestamp artifacts or duplicate leakage decide the model.
+  - Do not chase public leaderboard shifts that contradict stable OOF AUC.
+- Avoid external-data dependence as the default plan. Do not rely on unavailable toxicity corpora, internet lexicons, manual relabeling, private labels, or hidden resources.
+- Delay pseudo-labeling, stacking, domain-adaptive MLM, and multi-transformer ensembles until the sparse OOF ensemble is strong and stable.
+- Delay complex handcrafted profanity dictionaries unless OOF error analysis shows a clear gap; broad lexical vectorizers usually capture these cues with less brittleness.

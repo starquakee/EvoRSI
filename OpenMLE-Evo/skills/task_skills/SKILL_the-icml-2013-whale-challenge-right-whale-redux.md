@@ -1,0 +1,179 @@
+# Skill: the-icml-2013-whale-challenge-right-whale-redux
+
+## 1. Task-Specific Reading
+- This is binary bioacoustic detection: assign each hydrophone audio clip a continuous probability that it contains a North Atlantic right whale call rather than background/noise.
+- The modality is raw audio in `.aif` clips. Treat filenames as clip identifiers and labels as clip-level weak labels: a positive clip contains at least one call somewhere in the recording; a negative clip is noise/background.
+- The train/test split is organized by recording days: four training days and three testing days. Acoustic conditions, background noise, deployment artifacts, and call prevalence can be day-specific. Random clip splits are useful for debugging but are not the validation signal to optimize.
+- The metric is ROC AUC over clip-level probabilities. This has direct implications:
+  - submit ranked continuous scores, not hard 0/1 decisions;
+  - threshold tuning is irrelevant for final score;
+  - probability calibration matters only insofar as it changes global ranking;
+  - monotonic transforms of one model's scores do not change its standalone AUC, but can matter when blending models.
+- The real modeling problem is sparse event detection with weak labels, not generic sound classification. A high score comes from ranking clips by presence of call-like time-frequency structure while suppressing day-specific noise, ship noise, and hydrophone artifacts.
+- Dominant score levers:
+  - day/time-block-aware validation that estimates generalization to unseen recording days;
+  - call-preserving spectrogram design with adequate low-frequency/time resolution;
+  - attention or max-style temporal pooling so short calls are not averaged away;
+  - a stable feature-model pillar using engineered spectral summaries;
+  - a compact spectrogram CNN/SED pillar for learned call shape detection;
+  - OOF-driven rank/probability blending across complementary feature views and neural models;
+  - conservative augmentation that improves robustness without destroying frequency semantics.
+
+## 2. Highest-Expected-Score Strategy
+- Converge toward a hybrid ensemble with two complementary pillars:
+  - engineered audio-feature models for stability across few recording days;
+  - spectrogram CNN/SED models for high-capacity detection of whale-call time-frequency patterns.
+- Make the solution robust without depending on external audio datasets or unavailable checkpoints. Use installed PyTorch/timm/librosa/torchaudio-style tooling. ImageNet-pretrained timm backbones are useful only if weights are available in the runtime; the core strategy must still work with compact CNNs trained from supplied clips.
+- Use multiple time-frequency representations:
+  - log-mel spectrograms as the primary neural input;
+  - linear STFT or CQT-like low-frequency-focused views as alternate feature/CNN inputs when feasible;
+  - MFCC/spectral summary features for GBDT and linear models.
+- For the neural pillar, prefer a binary TimmSED-style architecture:
+  - convert each clip to a normalized log spectrogram;
+  - use a compact backbone such as EfficientNet-B0/B3, EfficientNetV2-S, ConvNeXt-Tiny, or NFNet-L0 depending on speed and pretrained availability;
+  - preserve time axis through the backbone, pool across frequency, and use attention pooling plus framewise max/mean auxiliary output;
+  - train with BCEWithLogits or focal BCE; use clip labels for both clipwise and weak framewise/max outputs.
+- For the feature pillar, train several binary rankers over clip-level features:
+  - LightGBM/CatBoost/XGBoost with conservative regularization;
+  - logistic/ridge/SGD-style linear models on standardized and quantile-normalized features;
+  - ExtraTrees/RandomForest as a diversity model if it improves OOF ranking.
+- Engineer features that summarize both global clip characteristics and localized call candidates:
+  - log-mel/STFT band energy statistics over time;
+  - MFCC means/stds/quantiles;
+  - spectral centroid, bandwidth, rolloff, flatness, contrast, zero-crossing rate, RMS/energy, entropy;
+  - band-energy ratios over low/mid/high ranges, plus maximum and top-k frame energies per band;
+  - temporal peak features: count of high-energy frames, max/mean peak prominence, duration of active regions, and local contrast against surrounding noise.
+- Validate and blend at the clip level. Any crops/windows/spec augmentations from the same original clip must remain within the same fold. The final score is clip-level AUC; every modeling decision should be judged by OOF clip-level AUC under day-aware folds.
+- For inference, aggregate multiple views per clip:
+  - full-clip prediction when clips are short enough;
+  - several time-shifted or overlapping windows if clips vary in length;
+  - max/attention-like aggregation for sparse call presence, blended with mean aggregation to reduce false positives.
+- The strongest late solution should be an OOF-weighted blend of:
+  - 2-4 feature-model families;
+  - 2-4 neural spectrogram models using different spectrogram parameters/backbones/seeds;
+  - optional pseudo-labeled neural models only if OOF and public feedback support them.
+
+## 3. Strong First Implementation Plan
+- Build one complete serious first-round solution around a feature ensemble plus one compact spectrogram CNN/SED. Do not start with a toy waveform baseline or a single generic CNN.
+- Data interpretation:
+  - binary target `1` for whale-call clips and `0` for noise clips;
+  - prediction target is one probability-like score per test clip;
+  - use all training clips, but keep OOF predictions for every model family.
+- Audio preprocessing:
+  - load mono waveform at a fixed sample rate, preferably 16 kHz or 32 kHz. Use 32 kHz if compute permits; 16 kHz is acceptable and often faster for marine acoustic calls if low/mid frequencies are retained.
+  - normalize each waveform by robust amplitude scale, not by dataset-wide absolute amplitude. Keep RMS/energy features separately because amplitude can still carry signal.
+  - use full-clip audio as the default. If clips are longer than the model window, train random/energy-biased windows but validate/infer by aggregating several windows back to clip level.
+- First feature matrix:
+  - compute log-mel spectrogram with 96-128 mel bins, n_fft around 1024-2048, hop length around 256-512, and a frequency range that does not discard low-frequency content;
+  - compute STFT-derived features with higher raw frequency resolution than mel for detecting narrow-band call structure;
+  - aggregate per-frequency and per-time statistics: mean, std, min, max, median, 5/10/25/75/90/95 percentiles, top-k means, active-frame ratios, and temporal peak counts;
+  - include MFCC and delta-MFCC summaries, spectral contrast, centroid, bandwidth, rolloff, flatness, RMS, ZCR, and low/mid/high band ratios;
+  - create a few denoised views by subtracting per-frequency median background or using local contrast features, then summarize those views.
+- First feature models:
+  - train LightGBM or XGBoost binary classifiers on raw engineered features with early stopping on folds and AUC as the validation metric;
+  - train standardized logistic/ridge-style models for a stable linear ranking view;
+  - optionally add ExtraTrees if it contributes OOF diversity;
+  - average or OOF-weight the feature models, keeping each only if it improves day-aware OOF AUC.
+- First neural model:
+  - use log-mel input of shape roughly `1 x n_mels x time`, replicated to 3 channels only when using image backbones;
+  - use a compact SED model with temporal attention pooling or a compact CNN with GeM/max/mean pooling across time;
+  - train with BCEWithLogitsLoss or focal BCE for binary target;
+  - use light augmentations: random gain, small Gaussian noise, time shift, SpecAugment time/frequency masks, and mixup with soft binary labels;
+  - avoid large rotations/flips/color-style image transforms because frequency direction and time structure are semantic.
+- Validation:
+  - create day-aware folds from timestamps/clip names when possible, with leave-one-day-out or grouped/time-block folds as the primary estimate;
+  - if leave-one-day-out is too unstable because of positive-count imbalance, use stratified folds within coarse time blocks and always report the grouped/day split as a sanity check;
+  - use identical folds for every model family so OOF blending is meaningful.
+- Inference/postprocessing:
+  - average fold predictions per model;
+  - for neural models, average full-clip, center/shifted, and possibly energy-focused window predictions;
+  - blend feature and neural predictions using OOF AUC-driven weights;
+  - optionally rank-normalize individual model predictions before blending and compare to raw probability averaging on OOF.
+
+## 4. High-ROI Upgrades Across Rounds
+- Round 2:
+  - Improve spectrogram parameters before increasing model size. Try 16 kHz vs 32 kHz, 64/96/128/192 mel bins, hop 128/256/512, and lower-frequency-focused `fmax`/band features. Keep settings that improve day-aware OOF AUC.
+  - Add local-background subtraction and call-candidate peak features: per-frequency median removal, temporal high-pass on log power, connected active-region summaries, and top-k local contrast features.
+  - Train a second feature model family and a stronger linear model on quantile-normalized features. Use OOF blend contribution, not standalone fold noise, to decide inclusion.
+  - Add one more neural backbone with a different inductive bias, such as EfficientNet plus ConvNeXt/NFNet, or a small custom CNN if pretrained weights are unavailable.
+  - Add time-shift TTA and compare mean, max, and attention-style aggregation across windows. For sparse events, max/softmax-weighted aggregation can outperform plain mean.
+- Round 3:
+  - Train 3-5 fold neural ensembles over diverse spectrogram views:
+    - log-mel broad-band view;
+    - low-frequency-emphasized mel or linear-STFT view;
+    - denoised/local-contrast spectrogram view.
+  - Use snapshot or multi-seed ensembles for the best neural configuration if training curves are stable.
+  - Implement an OOF blender over model-family predictions using nonnegative ridge/logistic regression or constrained weight search. Compare raw scores, logits, and rank-percentile inputs.
+  - Try focal BCE and class-balanced sampling if positives are rare or fold AUC shows false negatives dominating. Keep only if ranking improves, not because loss looks better.
+  - Use conservative pseudo-labeling only after the supervised ensemble is stable: add high-confidence test pseudo-labels to neural training at low weight, with soft labels and strong augmentation. Reject it if OOF-like holdout behavior or leaderboard sanity worsens.
+- Late round:
+  - Build the final blend from all OOF-backed candidates using bootstrap stability: prefer weights that remain strong across folds/day holdouts rather than weights that exploit one day.
+  - Tune per-model monotonic transforms such as power scaling or logit scaling for blend compatibility. For binary AUC, these only matter through blending and cross-model score geometry.
+  - Add frequency-coordinate channel to CNN inputs if spectrogram models over-trigger on frequency-shifted noise; it helps the model know that vertical position is meaningful.
+  - Add a two-stage detector/classifier only if there is clear evidence that active-region extraction is reliable: first find call-like high-contrast regions, then classify cropped regions and aggregate to clip score.
+  - Increase resolution/backbone size only after feature quality, validation, and blending are settled. Larger models on few days can overfit day noise.
+
+## 5. Validation and Metric Optimization
+- Use clip-level OOF AUC as the primary optimization target. Every crop/window from a clip inherits the clip fold; never split windows from the same clip across train and validation.
+- Prefer day-aware validation because the official test set is different recording days. Use:
+  - leave-one-training-day-out when each held-out day has both classes;
+  - grouped temporal blocks when full-day splits are too imbalanced;
+  - stratified random folds only as a secondary diagnostic for model capacity and implementation sanity.
+- Track several diagnostics:
+  - overall OOF ROC AUC on all clips;
+  - per-fold/day AUC to catch day-specific failures;
+  - AUC for feature-only, neural-only, raw blend, and rank blend;
+  - positive/negative score distributions per day to detect background-condition shortcuts.
+- AUC optimization behavior:
+  - do not optimize thresholds, accuracy, F1, or logloss as the main target;
+  - choose checkpoints by validation AUC, not validation loss;
+  - rank averaging can be strong when model calibration differs by family;
+  - raw probability/logit averaging can be better when models share comparable score scales;
+  - clipping to `[eps, 1-eps]` is numerically harmless but should not be used as a scoring trick.
+- When CV and leaderboard disagree, trust changes that improve grouped/day-aware OOF and are stable across at least two model families. Be skeptical of random-fold-only gains: they may exploit near-duplicate background or day-specific noise.
+- For neural validation, aggregate windows to one clip prediction before computing AUC. Evaluating window-level predictions against clip labels exaggerates performance and misaligns with the metric.
+- For blending, use the same OOF folds for all candidates. Optimize simple nonnegative weights first. Only use a learned stacker if it improves day-aware OOF and does not collapse on any held-out day.
+
+## 6. Model, Feature, and Preprocessing Priorities
+- Highest-value preprocessing:
+  - consistent mono resampling;
+  - robust waveform normalization while preserving energy features;
+  - log-power spectrograms with low-frequency retention;
+  - per-sample spectrogram normalization plus optional per-frequency background subtraction;
+  - full-clip or multi-window aggregation so sparse calls are retained.
+- Highest-value engineered features:
+  - mel/STFT band-energy means, quantiles, maxima, and top-k frame summaries;
+  - temporal peak and active-region counts from denoised log-power spectrograms;
+  - low/mid/high band ratios and localized contrast measures;
+  - MFCC/delta-MFCC summaries;
+  - spectral contrast, flatness, centroid, bandwidth, rolloff, RMS, ZCR, entropy;
+  - day/time-derived grouping features only for validation analysis, not as a leakage-prone primary predictor unless OOF proves they generalize.
+- Highest-value model families:
+  - LightGBM/XGBoost/CatBoost binary classifiers over engineered features;
+  - standardized logistic/ridge linear rankers for robust small-data behavior;
+  - compact SED CNN with attention pooling over time;
+  - compact spectrogram image CNN with GeM/max/mean pooling as a simpler neural diversity model;
+  - multi-seed/fold ensembles of the best feature and neural configurations.
+- Neural training priorities:
+  - BCE/focal BCE with continuous sigmoid output;
+  - mixup with soft binary labels;
+  - light SpecAugment, time shift, gain/noise augmentation;
+  - checkpoint by clip-level validation AUC after aggregation;
+  - keep model capacity moderate until grouped validation is reliable.
+- Inference priorities:
+  - predict multiple aligned views per clip when affordable;
+  - aggregate sparse-event predictions with a blend of mean and max/attention pooling;
+  - average folds and seeds;
+  - blend feature and neural models using OOF evidence.
+
+## 7. Avoid or Delay
+- Avoid treating this as generic image classification on spectrogram PNGs. Spectrogram axes have semantics; arbitrary rotations, vertical flips, and heavy color jitter are harmful or at least unproven.
+- Avoid a pure large neural solution as the first and only route. Four training days make day-specific overfitting likely; engineered audio features and simple rankers provide necessary stability.
+- Avoid relying on external whale datasets, manual labels, private annotations, or downloadable audio foundation checkpoints as the default plan.
+- Avoid random clip validation as the sole model-selection signal. It can overestimate performance by sharing recording-day background conditions across train and validation.
+- Avoid crop/window-level leakage. All crops, time shifts, spectrogram variants, and pseudo-labels from one clip must share the same fold.
+- Avoid threshold tuning and hard labels for submission. AUC rewards ordering, not binary decisions.
+- Avoid optimizing logloss/calibration at the expense of ranking. Calibration changes are useful only when they improve OOF AUC or blend compatibility.
+- Avoid over-aggressive pseudo-labeling early. Test-day pseudo-labels can reinforce background artifacts and public-test noise; use them only after a strong supervised OOF baseline exists.
+- Delay heavy transformers or large backbones until compact CNN/SED and feature ensembles are exhausted. Under this data shape, resolution, validation, and blending usually beat raw model size.
+- Avoid using timestamp/day identity as a shortcut feature in the final model unless carefully validated. It can capture training-day prevalence and fail on unseen test days.

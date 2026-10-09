@@ -1,0 +1,51 @@
+# Description
+
+Do you think you can take on the crudest, meanest trolls on the internet? Okay then, game on!
+The challenge is to detect when a comment from a conversation would be considered insulting to another participant in the conversation. Samples could be drawn from conversation streams like news commenting sites, magazine comments, message boards,
+ blogs, text messages, etc.
+The idea is to create a generalizable single-class classifier which could operate in a near real-time mode, scrubbing the filth of the internet away in one pass.
+Prizes you say?
+Besides the prize money, eternal fame and glory, monuments in your honor, and the admiration of friend and foe alike, you get a chance for an interview at Impermium for the Principal Data Engineer role.
+In addition, there will be a Visualization prospect attached to the contest. &nbsp;Slice and dice the data to show us the most amazing, informative and thought-provoking infographics, diagrams or plots!&nbsp;Submission open 1 week before the contest
+ ends.&nbsp;
+(Please note that referenced fame, glory, monuments and admiration are to be bestowed only in the imagination of the contestants)
+
+# Evaluation
+
+This is a single-class classification problems. &nbsp;Your predictions should be a number in the range [0,1] &nbsp;where 0 indicates 0% probability of comment being an insult, and 1 represents 100% insult.
+&nbsp;All predictions should be in the first column of your submission file. Please see 'sample_submissions_null.csv&quot; for the correct format.
+The evaluation metric for this competition is the Area under the Receiver Operating Curve (AUC). &nbsp; This evaluation metric penalizes wrong predictions made with high probability. &nbsp;For more about this metric, check out the
+AUC&nbsp;page on the Kaggle Wiki.
+&nbsp;
+Please note, winners for the competition will be determined by their performance on an additional verfication set that will be released at the end of the competition.&nbsp; See Timeline tab for details.
+
+# Winners
+
+This challenge focused on using natural language processing to flag insulting comments posted in online forums.
+
+First Place:&nbsp;Vivek Sharma, New Delhi, India
+Second Place: Dmitry S., USA
+Visualization Prize:&nbsp;Charlie Turner, Davis, USA
+
+# Dataset Description
+
+Data
+The data consists of a label column followed by two attribute fields.&nbsp;
+This is a single-class classification problem.&nbsp;The label is either 0 meaning a
+neutral comment, or 1 meaning an insulting comment (neutral can be considered as
+not belonging to the insult class. &nbsp;Your predictions must be a real number in the range [0,1] where 1 indicates 100% confident prediction that comment is an insult.
+The first attribute is the time at which the comment was made. It is sometimes blank, meaning an accurate timestamp is not possible. It is in the form &quot;YYYYMMDDhhmmss&quot; and then the Z character. It is on a 24 hour clock and corresponds to the localtime at
+ which the comment was originally made.
+The second attribute is the unicode-escaped text of the content, surrounded by double-quotes. The content is mostly english language comments, with some occasional formatting.
+Guidelines
+
+We are looking for comments that are intended to be insulting to a person who is a part of the larger blog/forum conversation.&nbsp;
+We are NOT looking for insults directed to non-participants (such as celebrities, public figures etc.).&nbsp;
+Insults could contain profanity, racial slurs, or other offensive language. But often times, they do not.&nbsp;
+Comments which contain profanity or racial slurs, but are not necessarily insulting to another person are considered not insulting.
+The insulting nature of the comment should be obvious, and not subtle.&nbsp; 
+
+There may be a small amount of noise in the labels as they have not been meticulously cleaned. However, contenstants can be confident the error in the training and testing data is &lt; 1%.&nbsp;
+
+Contestants should also be warned that this problem tends to strongly overfit. The provided data is generally representative of the full test set, but not exhaustive by any measure. Impermium will be conducting final evaluations based on an unpublished set
+ of data drawn from a wide sample.

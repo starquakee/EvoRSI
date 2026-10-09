@@ -1,0 +1,185 @@
+# Skill: random-acts-of-pizza
+
+## 1. Task-Specific Reading
+- Predict `requester_received_pizza`: whether a Reddit Random Acts of Pizza request succeeded.
+- This is binary classification with mixed modalities:
+  - Free text: request title, request body, and edit-aware request body.
+  - Social/user metadata: requester account age, prior Reddit/RAOP activity, karma-like vote totals, subreddit history, request timestamp.
+  - List/categorical text: requester subreddits at request.
+- The metric is ROC AUC on the predicted probability/score for success. AUC is threshold-free and rank-based:
+  - Optimize ordering of successful requests above unsuccessful requests.
+  - Do not optimize hard labels, accuracy, F1, or a 0.5 threshold.
+  - Probability calibration is secondary; blend/rank quality matters more.
+- The dataset is small, around a few thousand labeled requests. Variance and overfitting are major risks.
+- Use only information available at request time as modeling signal. Fields measured at retrieval time, fields revealing a giver, post edits after outcome, or flair derived after receiving/giving pizza are dangerous or unavailable in test and should not define the core model.
+- Prefer `request_text_edit_aware` as the main body text because raw request text may contain post-success edits in training. Use raw text only as a controlled auxiliary feature if it improves OOF without obvious leakage behavior.
+- Dominant score levers:
+  - Strong sparse social-text models on title/body with word and character n-grams.
+  - Careful metadata features from at-request requester history and timestamp.
+  - High-signal subreddit-history features, treated as categorical/list text.
+  - OOF-validated blending of sparse text, metadata/GBDT, and optional transformer predictions.
+  - Leakage control and fold stability on a small AUC task.
+
+## 2. Highest-Expected-Score Strategy
+- Converge toward a compact mixed-model ensemble, not a single monolithic model:
+  - Sparse lexical branch: TF-IDF word n-grams, char n-grams, and NB-SVM/log-count-ratio logistic models.
+  - Metadata branch: CatBoost/LightGBM/XGBoost on at-request numeric, categorical, temporal, text-stat, subreddit, and low-rank text features.
+  - Optional neural text branch: a small/medium pretrained English encoder fine-tuned for binary classification only after sparse+metadata CV is strong.
+  - Blend model outputs by OOF AUC, usually with rank averaging or nonnegative weight search.
+- Treat classical sparse models as top-tier here. Short social-media requests, scarce labels, spelling/casing/punctuation cues, and direct lexical persuasion signals are exactly where TF-IDF plus regularized linear models remain extremely competitive.
+- Make the text input task-aware:
+  - Concatenate title and edit-aware body with explicit field markers.
+  - Preserve social-text artifacts: punctuation, capitalization, repeated characters, URLs, money/food words, gratitude, urgency, reciprocity, location, job/school/family/medical mentions.
+  - Avoid aggressive cleaning that erases tone and specific persuasive phrasing.
+- Make the metadata branch answer "who is asking, how established are they, and when are they asking?":
+  - Account age at request.
+  - Counts of comments/posts/subreddits at request.
+  - RAOP prior activity at request.
+  - Upvotes-minus-downvotes and upvotes-plus-downvotes at request.
+  - Log transforms, per-day rates, ratios, zero-activity flags, and interaction features.
+  - Timestamp-derived day-of-week, hour, month, weekend, and cyclical encodings.
+  - Subreddit list size and sparse/list-vectorized subreddit tokens.
+- For AUC, ensembling should prioritize complementary ranking signals:
+  - Sparse text often captures the ask itself.
+  - Metadata captures requester credibility/history.
+  - Subreddit history captures community identity and interests.
+  - Transformers may capture narrative semantics and politeness, but can overfit if used alone.
+- Final high-score endpoint:
+  - 5- or 10-fold stratified OOF pipeline.
+  - Several distinct sparse text models with tuned vectorizers and regularization.
+  - One metadata/SVD GBDT model family, preferably CatBoost plus LightGBM/XGBoost variants if they add diversity.
+  - Optional DeBERTa/ModernBERT-style encoder fold ensemble when available and OOF-positive.
+  - OOF-optimized rank/probability blend, with leakage-prone columns excluded from all branches.
+
+## 3. Strong First Implementation Plan
+- Build a serious first script around a sparse-text plus metadata ensemble.
+- Data representation:
+  - Target: binary `requester_received_pizza`.
+  - Main text: `[TITLE] {request_title} [BODY] {request_text_edit_aware}`.
+  - Auxiliary text view: title-only and body-only features, or raw body only if OOF improves after leakage checks.
+  - Subreddit list: convert `requester_subreddits_at_request` into a space-separated token string with stable prefixes, then vectorize separately.
+- Exclude or quarantine likely unavailable/post-outcome features:
+  - `giver_username_if_known`.
+  - Any request upvote/downvote/comment counts measured at retrieval.
+  - Any requester account/activity/karma fields measured at retrieval.
+  - `post_was_edited` if it reflects post-outcome edits.
+  - `requester_user_flair` unless verified to be at-request and present in test; default is to exclude.
+  - Usernames as direct identifiers; they are high-cardinality and unlikely to generalize.
+- Sparse text branch:
+  - Word TF-IDF on main text: unigrams through bigrams or trigrams, sublinear TF, moderate `min_df`, high feature cap.
+  - Character TF-IDF: `char_wb` or raw char n-grams around 3-6, plus a 2-5 variant if time allows.
+  - Separate title/body vectorizers can help because titles are compact and often contain direct cues.
+  - Train regularized LogisticRegression models on stacked word+char features.
+  - Add an NB-SVM-style model: compute smoothed positive/negative log-count ratios per token and train logistic regression on reweighted sparse features.
+  - Tune `C` on OOF AUC; try a small grid such as strong, medium, and weak regularization rather than many near-duplicates.
+- Metadata branch:
+  - Numeric preprocessing: log1p positive count features, signed-log vote/karma differences, missing indicators where meaningful.
+  - Derived features:
+    - Comment/post totals and ratios at request.
+    - Karma per post/comment.
+    - Account age buckets and activity per account-day.
+    - RAOP activity flags and days since first RAOP post.
+    - Subreddit count, common-subreddit indicators, and subreddit TF-IDF/SVD components.
+    - Text stats: word count, character count, sentence-ish count, unique-word ratio, average word length, punctuation counts, uppercase ratio, digit/money markers, URL marker, gratitude/reciprocity/urgency cue counts.
+    - Time features from UTC timestamp: hour, day-of-week, month, weekend, cyclical sin/cos.
+  - Model metadata with CatBoost and/or LightGBM/XGBoost. Include truncated SVD components from text TF-IDF and subreddit TF-IDF to let GBDTs use text themes without huge sparse matrices.
+- Validation:
+  - Use StratifiedKFold with 5 folds for iteration; consider 10 folds or repeated 5-fold for final variance reduction.
+  - Store OOF predictions for every model branch.
+  - Score with ROC AUC on OOF predictions.
+  - Compare text-only, metadata-only, subreddit-only, and blended OOF AUC to verify each branch contributes.
+- Inference/postprocessing:
+  - Average test predictions across folds per model.
+  - Blend selected models using OOF-optimized nonnegative weights.
+  - For AUC, prefer rank-normalized blending when combining LogisticRegression probabilities, GBDT probabilities, and neural logits.
+  - Output continuous scores. No thresholding.
+
+## 4. High-ROI Upgrades Across Rounds
+- Round 2:
+  - Tune sparse text views first. Compare word `(1,2)` vs `(1,3)`, char `(3,5)` vs `(3,6)` vs `(2,5)`, `char` vs `char_wb`, `min_df`, `max_df`, binary counts for NB-SVM, and separate title/body vectorizers.
+  - Tune logistic `C` per feature view; smaller data often rewards stronger regularization than generic defaults.
+  - Add curated text-stat/cue features that are directly relevant to RAOP: gratitude/thanks, reciprocity/pay-it-forward language, urgency, family/child, job/school, money/bank, hunger/food, location/delivery, offer-to-perform, politeness, and excessive punctuation/caps.
+  - Strengthen metadata ratios and interactions: account-age-normalized activity, karma density, RAOP-history flags, subreddit diversity, and text length by account activity.
+  - Add subreddit-history vectorization and SVD if not already present.
+  - Use OOF hill climbing or constrained weight search for sparse+metadata blends. Keep only models with distinct OOF contribution.
+- Round 3:
+  - Add a transformer text branch if a suitable checkpoint is available in the execution environment:
+    - Use a strong English encoder such as DeBERTa-v3-base/large or ModernBERT-base.
+    - Input title plus edit-aware body with field markers.
+    - Use binary BCE/logit loss, 5-fold OOF, mixed precision, small learning rate, early stopping by AUC.
+    - Keep max length around 256-512 after checking length distribution; most RAOP requests should not require long-context modeling.
+    - Use strong regularization: dropout, weight decay, short training, and seed/fold averaging.
+  - Blend transformer output with sparse and metadata predictions by OOF AUC. Give it moderate weight only if it improves fold-stable ranking.
+  - Add a second GBDT variant with different feature subsets or depth/regularization for diversity, not as a blind model zoo.
+  - Try probability calibration only for models whose OOF score improves after calibration; AUC itself does not require calibration.
+- Late round:
+  - Increase validation stability with repeated stratified folds or multi-seed averaging of the best sparse and GBDT models.
+  - Try soft pseudo-labeling on test only after the blend is stable. Use low weight and soft targets; do not hard-label uncertain middle-ranked examples.
+  - Try domain-adaptive MLM on train+test request text only as a neural upgrade if transformer training is already OOF-positive and time remains.
+  - Use stacking with a heavily regularized logistic/ridge meta-model on OOF predictions if there are at least several genuinely diverse base models. Compare against simple rank blending because stacking can overfit small data.
+  - Explore monotonic/rank transforms per model before blending. AUC can improve when badly calibrated but well-ranked models are rank-normalized.
+
+## 5. Validation and Metric Optimization
+- Primary validation metric is OOF ROC AUC for the binary target.
+- Split strategy:
+  - Use deterministic shuffled StratifiedKFold because the task has one target and one request per requester.
+  - Use 5 folds for rapid iteration and 10 folds/repeated folds for final selection if compute permits.
+  - Check fold positive rates and fold-level AUC variance. Small data means a tiny mean-CV gain can be noise.
+  - Add a chronological sanity check if timestamp features dominate or if leaderboard/CV correlation looks suspicious. Do not replace the main CV with a single time holdout unless it clearly better matches the test split.
+- Leakage control is part of validation:
+  - A model that jumps by using retrieval-time or post-outcome fields is not trustworthy.
+  - Train feature branches using only columns present and logically available at posting time.
+  - Prefer edit-aware text to avoid training on success edits.
+  - If a suspicious feature has extremely high importance or changes CV far beyond other features, remove it unless it is clearly at-request.
+- Metric-aligned optimization:
+  - AUC only cares about ordering, so no threshold tuning.
+  - Optimize blend weights on OOF AUC, not log loss or accuracy.
+  - Rank-average heterogeneous model outputs when calibration scales differ.
+  - Avoid aggressive clipping; clipping can collapse ranking. Only tiny numeric clipping is acceptable.
+  - For each candidate feature/model, require improvement larger than fold noise or improvement that repeats across fold seeds.
+- What to trust:
+  - Trust OOF improvements that are stable across folds, not driven by one fold, and do not rely on suspect columns.
+  - Trust a model with slightly lower standalone AUC if it improves the OOF ensemble and has lower prediction correlation with existing models.
+  - Treat public leaderboard changes as noisy on a small AUC task; use it to detect gross distribution mismatch, not to justify leakage-prone changes.
+
+## 6. Model, Feature, and Preprocessing Priorities
+- Highest-priority models:
+  - LogisticRegression on combined word+char TF-IDF.
+  - NB-SVM/log-count-ratio logistic model for sparse text.
+  - CatBoost/LightGBM/XGBoost on metadata, text statistics, subreddit features, and SVD text components.
+  - Optional transformer encoder as a late ensemble member, not a replacement for sparse models.
+- Highest-priority text features:
+  - Title and edit-aware body with field markers.
+  - Word n-grams for phrases about need, circumstances, gratitude, repayment, and offers.
+  - Character n-grams for informal spelling, punctuation, elongation, emotive tone, and URL/money/address-like artifacts.
+  - Title-only features because titles often contain compressed intent.
+  - Text statistics and cue counts that express request quality, specificity, politeness, urgency, and credibility.
+- Highest-priority metadata features:
+  - At-request account age, comments, posts, subreddits, RAOP prior activity, and vote totals.
+  - Log/count/rate features from those fields.
+  - Karma/activity ratios and zero-history flags.
+  - UTC timestamp features and cyclical encodings.
+  - Subreddit list as both count/diversity metadata and sparse list text.
+- Preprocessing:
+  - Minimal text cleaning: fill missing, normalize whitespace, repair obvious encoding if needed.
+  - Preserve punctuation, casing, repeated characters, URLs, numbers, dollar signs, and informal grammar.
+  - Use edit-aware text as default body; avoid raw post-success edits.
+  - For sparse models, lowercase can be useful, but keep char features to recover case/punctuation information.
+  - For transformers, use raw-ish text with field markers and no destructive normalization.
+- Ensembling:
+  - Generate OOF predictions for every branch.
+  - Compare raw probability blending versus rank blending.
+  - Optimize nonnegative weights; avoid many tiny weights on correlated variants.
+  - Keep ensemble components interpretable enough to spot leakage and overfit.
+
+## 7. Avoid or Delay
+- Avoid using fields that would not be known at request time: giver identity, retrieval-time request votes/comments, retrieval-time requester activity/karma/account age, post-outcome edit indicators, and outcome-derived flair.
+- Avoid raw `request_text` as the only body source without checking for success-edit leakage. Default to edit-aware text.
+- Avoid direct username memorization and high-cardinality identifiers as core predictors.
+- Avoid a transformer-only first solution. On this small social-text dataset, it is slower, higher variance, and may underperform sparse lexical models unless carefully regularized and blended.
+- Avoid LLM classifiers, large QLoRA models, and elaborate neural tricks before the sparse+metadata ensemble is stable. They are high-risk relative to expected gain here.
+- Avoid external datasets, internet lexicons, manual labels, paper-derived private features, or post-competition labels as the default strategy.
+- Avoid aggressive text cleaning: do not remove punctuation, URLs, numbers, capitalization, repeated characters, informal spelling, or gratitude/reciprocity terms by default.
+- Avoid optimizing accuracy, F1 thresholds, class prevalence, or hard labels. They are metric-mismatched for ROC AUC.
+- Avoid overfitted blend searches with many nearly identical models. Use simple rank/weighted blending and require stable OOF gains.
+- Delay pseudo-labeling, stacking, domain-adaptive MLM, and complex calibration until after leakage-safe OOF predictions show a strong baseline and a reliable validation signal.

@@ -1,0 +1,157 @@
+# Skill: jigsaw-toxic-comment-classification-challenge
+
+## 1. Task-Specific Reading
+- Predict six independent toxicity labels for each Wikipedia talk-page comment: `toxic`, `severe_toxic`, `obscene`, `threat`, `insult`, and `identity_hate`.
+- This is multilabel text classification, not multiclass classification. A comment may have several positive labels or none.
+- The submission requires a probability-like score for each label. The metric is mean column-wise ROC AUC, so the primary objective is per-label ranking quality, averaged equally across the six labels.
+- AUC is threshold-free. Do not optimize hard 0/1 decisions, F1 thresholds, exact prevalence, or a single global toxicity class as the main target.
+- The labels are highly imbalanced and correlated:
+  - `toxic`, `obscene`, and `insult` have abundant lexical signal.
+  - `severe_toxic`, `threat`, and `identity_hate` are rarer and require careful regularization, folds with positives in every validation split, and model diversity.
+  - The broad `toxic` label is related to the other labels but must still be predicted as its own column.
+- The text is user-generated and adversarial-ish: profanity, misspellings, repeated punctuation, casing, spacing, obfuscation, identity terms, and short insults are signal, not noise.
+- Dominant score levers:
+  - Strong word and character n-gram sparse models, especially char n-grams for obfuscated toxicity.
+  - Per-label modeling with class-imbalance-aware regularization.
+  - Reliable multilabel OOF predictions scored by per-column AUC.
+  - A diverse blend of sparse lexical models and one or more pretrained transformer encoders if time permits.
+  - Conservative text normalization that fixes encoding/spacing without deleting abusive cues.
+
+## 2. Highest-Expected-Score Strategy
+- Converge toward a compact but diverse multilabel ensemble optimized directly for mean per-label ROC AUC:
+  - Build multiple sparse pipelines from raw comments: word TF-IDF, character TF-IDF, and NB-SVM-style log-count-ratio features.
+  - Train independent binary classifiers for each label and each feature view.
+  - Produce OOF predictions for every model/label; evaluate each label AUC and mean AUC.
+  - Blend models using OOF-optimized weights, either one global weight vector or separate weights per label.
+  - Average final test scores from the selected fold/model ensemble; keep outputs in `[0, 1]`.
+- Do not treat sparse lexical models as a toy baseline. For this task, high-order word and character n-grams are a top-tier modeling route because the signal is mostly lexical, short-context, profanity/identity-term driven, and robustly captured by linear separators.
+- Primary sparse model family:
+  - Word TF-IDF: unigrams through trigrams, `sublinear_tf=True`, unicode accent stripping, moderate `min_df`, high max features.
+  - Character TF-IDF: char or `char_wb` n-grams around 2-6 or 3-6. This is essential for misspellings, punctuation variants, creative spacing, and masked profanity.
+  - NB-SVM/log-count ratio: for each label, compute positive-vs-negative smoothed token ratios on binary counts or TF-IDF-like counts, multiply features by ratios, then fit regularized logistic regression or linear SVM-style classifier.
+  - Logistic regression with strong but tuned `C` is the most practical first-class estimator because it gives stable continuous scores and handles sparse matrices well.
+- Transformer family:
+  - Add a pretrained English encoder after the sparse OOF pipeline is stable. Use `microsoft/deberta-v3-base` or `microsoft/deberta-v3-large` when feasible, with a six-output sigmoid head and `BCEWithLogitsLoss`.
+  - Use transformers for semantic/contextual edge cases: threats without obvious profanity, identity hate phrased indirectly, sarcasm-ish phrasing, and comments where sparse cues overfire.
+  - Use raw or lightly normalized comments; over-cleaning hurts transformer tokenization and destroys toxicity cues.
+  - A single strong transformer is often best used as an ensemble member rather than a replacement for sparse n-gram models.
+- Metric behavior:
+  - ROC AUC depends on ranking, not calibration. Monotonic transforms per label do not change AUC, but blending does; preserve score order and avoid thresholding.
+  - Rare labels can dominate leaderboard movement because they have higher variance and fewer positives. Improve their ranking with label-specific hyperparameters and ensemble weights instead of only optimizing the frequent `toxic` column.
+- Final high-score endpoint:
+  - A 5-fold or repeated-fold sparse ensemble with word TF-IDF, char TF-IDF, and NB-SVM/logistic variants.
+  - One transformer encoder fold ensemble trained with multilabel BCE and conservative settings.
+  - OOF-optimized per-label blending, using simple weighted averaging or rank averaging when calibration differs strongly.
+
+## 3. Strong First Implementation Plan
+- Build one complete script around a high-performing sparse multilabel ensemble first. This is the strongest feasible first-round route because it is fast, robust, and directly matches the task’s lexical signal.
+- Input representation:
+  - Use `comment_text` as the only primary feature.
+  - Fill missing comments with an empty string, then apply minimal normalization: convert to string, normalize obvious broken whitespace, optionally normalize unicode accents for the sparse vectorizer, and preserve punctuation/case variants through feature choices.
+  - Do not remove profanity, punctuation, repeated characters, URLs, identity words, or uppercase text. These are predictive for multiple labels.
+- Feature views:
+  - Word TF-IDF: `ngram_range=(1, 2)` or `(1, 3)`, `sublinear_tf=True`, `strip_accents='unicode'`, `min_df` around 2-5, and a large feature cap if needed.
+  - Character TF-IDF: `analyzer='char_wb'` or `char`, `ngram_range=(3, 6)` plus a variant `(2, 5)` if time allows.
+  - Combined sparse matrix: horizontally stack word and char TF-IDF for a main logistic model.
+  - NB-SVM variant: use binary count or TF-IDF features, compute label-specific log-count ratios, then fit one regularized linear model per label.
+- Models:
+  - Train one-vs-rest logistic regression per label on combined word+char features.
+  - Use class-aware regularization: test `C` values around `0.5, 1, 2, 4, 8`; rare labels may prefer stronger regularization.
+  - Use `class_weight='balanced'` as an experiment, not a fixed rule. It can help rare labels but may hurt ranking for frequent labels. Select by OOF AUC per label.
+  - Add a second sparse model with different vectorization or NB-SVM features for diversity, not many near-duplicate models.
+- Validation:
+  - Use 5 folds. Since plain `StratifiedKFold` cannot directly stratify multilabel targets, stratify on a compact surrogate such as label row pattern, positive label count plus broad toxicity, or a rare-label-aware combined key. Ensure every fold has positives for every target.
+  - Store OOF predictions for each label and compute ROC AUC per column and their mean.
+  - Choose model variants by aggregate OOF mean AUC, while checking that rare-label AUC does not collapse.
+- Inference and blending:
+  - Fit each fold’s vectorizers/models only on that fold’s training split for OOF, then train/predict test per fold and average.
+  - For final test scores, average probabilities or sigmoid-transformed decision scores across folds and sparse variants.
+  - If mixing logistic probabilities with SVM-style decision scores, transform each model’s OOF/test scores label-wise to ranks before blending, or fit a simple monotonic sigmoid on OOF for comparability. For pure AUC, rank averaging is often robust.
+- If time and code budget allow in the first implementation, add one lightweight transformer only after the sparse pipeline is complete:
+  - Backbone: DeBERTa-v3-base or another available strong English encoder.
+  - Max length: 192-256 for fast first pass; 384-512 only if length analysis shows meaningful truncation.
+  - Loss: six-output `BCEWithLogitsLoss`; validation metric is mean per-label AUC.
+  - Blend transformer predictions with sparse OOF using small-to-moderate weight if it improves OOF.
+
+## 4. High-ROI Upgrades Across Rounds
+- Round 2:
+  - Tune sparse vectorizers: compare word `(1,2)` vs `(1,3)`, char `(2,5)` vs `(3,6)`, `char` vs `char_wb`, `min_df`, `max_features`, and binary-count NB-SVM variants.
+  - Tune `C` per label and per feature family. Rare labels often need different regularization than `toxic` and `obscene`.
+  - Build per-label OOF blend weights across sparse variants. Use simple nonnegative weights and avoid overfitting tiny AUC differences.
+  - Add or refine rank averaging for heterogeneous sparse models. Rank averaging is metric-aligned for AUC and avoids calibration conflicts.
+  - Inspect OOF fold positivity counts and rare-label AUC variance. If a fold lacks stable rare-label behavior, improve stratification before trusting blend changes.
+- Round 3:
+  - Add a transformer fold ensemble:
+    - Use DeBERTa-v3-base for practical speed; DeBERTa-v3-large if the environment has the checkpoint and time permits.
+    - Train 3-5 folds with multilabel BCE, mixed precision, short warmup, cosine/linear decay, and early stopping by mean AUC.
+    - Use max length 256 as the default, then test 384/512 if OOF shows long comments are being truncated in important cases.
+    - Add multi-sample dropout or mean pooling if straightforward; keep the head simple.
+  - Blend transformer and sparse outputs per label. Transformers may help `threat` and `identity_hate` more than high-frequency profanity labels, so per-label weights matter.
+  - Try domain-adaptive MLM only if the script can include it cleanly and time remains. Use train plus unlabeled test comments for MLM, then supervised fine-tune. Treat this as an upgrade, not a first dependency.
+- Late round:
+  - Add seed averaging for the best transformer and/or retrain the best sparse settings with several fold seeds for variance reduction.
+  - Use soft pseudo-labeling only after a strong OOF-validated ensemble exists. Add test comments with soft probabilities at low weight, especially for high-confidence examples; do not hard-threshold rare labels aggressively.
+  - Try stacking on OOF predictions with a very regularized logistic meta-model per label. Include only base-model scores, not target-derived features. Compare against simple weighted/rank averaging because stacking can overfit.
+  - Add a second transformer architecture for diversity only if it is available and the first transformer genuinely improves OOF. A weaker transformer can still help if its errors differ from sparse models.
+  - Consider label-dependency postprocessing only as a late experiment: for example, broad `toxic` should often rank high when severe sublabels are high. Any monotonic adjustment must improve OOF mean AUC and must not flatten rare-label rankings.
+
+## 5. Validation and Metric Optimization
+- Use OOF mean column-wise ROC AUC as the primary decision metric:
+  - Compute `roc_auc_score(y_true[:, j], pred[:, j])` for each of six labels.
+  - Average the six AUC values equally.
+  - Track each label separately; a higher mean caused only by `toxic` improvement can hide damage to rare labels.
+- Split strategy:
+  - Use deterministic 5-fold validation with multilabel-aware stratification by label pattern or a carefully built surrogate.
+  - Verify every fold has enough positives for `severe_toxic`, `threat`, and `identity_hate`; otherwise the fold metric is noisy or invalid.
+  - Do not use random holdout only unless time is extremely tight. The rare labels need OOF coverage to select reliable regularization and blend weights.
+- Metric-aligned behavior:
+  - AUC rewards ordering. Prefer models that rank positives above negatives, even if their probabilities are not perfectly calibrated.
+  - Do not tune classification thresholds. Thresholds do nothing for AUC submissions.
+  - Do not clip aggressively. Tiny clipping for numeric stability is fine, but clipping many scores toward a narrow interval can destroy useful ranking.
+  - For blend optimization, optimize mean AUC on OOF. Per-label blend weights are valid because the metric is a mean of independent column AUCs.
+  - For heterogeneous outputs, rank-normalize label-wise before blending when OOF shows probability scale mismatch. Probability averaging is fine among similarly calibrated logistic models.
+- Trust hierarchy:
+  - Trust OOF changes that improve mean AUC and are stable across labels/folds.
+  - Treat public leaderboard movement as noisy, especially for rare labels and because test data includes rows not used for scoring.
+  - If local CV and leaderboard diverge, first inspect split balance, duplicate/near-duplicate comments, text cleaning differences, and rare-label fold variance. Do not chase one-off leaderboard shifts with unvalidated postprocessing.
+
+## 6. Model, Feature, and Preprocessing Priorities
+- Highest-priority features:
+  - Character n-grams for obfuscation, misspelling, punctuation, spacing, and profanity variants.
+  - Word n-grams for toxic phrases, identity references, threat phrases, and multiword insults.
+  - NB-SVM log-count-ratio features for strong linear separation on sparse toxic terms.
+  - Simple length/case/punctuation features only as optional stacker inputs; they are lower value than n-grams and often redundant.
+- Highest-priority models:
+  - Regularized logistic regression per label on combined word+char TF-IDF.
+  - NB-SVM-style logistic models per label.
+  - A second sparse variant with different char analyzer/ngram range for diversity.
+  - DeBERTa-v3-base/large multilabel encoder as the main neural complement.
+- Target/loss:
+  - Use independent binary objectives for the six labels.
+  - For transformers, six logits with `BCEWithLogitsLoss`; optional positive-class weighting only if OOF rare-label ranking improves.
+  - For sparse models, independent binary classifiers allow label-specific regularization and feature ratios.
+- Preprocessing:
+  - Keep raw lexical cues. Preserve profanity, casing, punctuation, repeated symbols, and identity terms.
+  - Normalize whitespace and obvious encoding artifacts only.
+  - Compare lowercase vs preserving case through vectorizer settings; lowercase often helps word TF-IDF, while char features recover casing/punctuation signal.
+  - Do not stem/lemmatize as a default. Toxicity often depends on exact forms and obfuscated variants.
+- Ensembling:
+  - Average folds first, then blend model families.
+  - Use OOF-optimized per-label weights for sparse variants and transformer predictions.
+  - Prefer rank averaging when combining logistic, SVM-margin, and transformer scores with different calibration.
+  - Keep the ensemble small enough that each component has distinct OOF contribution.
+
+## 7. Avoid or Delay
+- Avoid collapsing the six labels into one multiclass or one binary toxicity target. The submission and metric require six separate ranked columns.
+- Avoid threshold tuning, F1 optimization, hard labels, argmax outputs, or prevalence matching as core optimization. They are metric-mismatched for ROC AUC.
+- Avoid aggressive cleaning:
+  - Do not remove punctuation, profanity, URLs, capitalization, repeated characters, or identity terms by default.
+  - Do not replace all offensive words with a generic token; exact lexical identity is part of the signal.
+  - Do not strip short comments or nonstandard spellings as noise.
+- Avoid relying on a transformer-only first solution. It can be strong, but it is slower and may miss the sparse lexical advantage that is central to this task.
+- Avoid using external toxicity datasets, private labels, manual relabeling, internet-derived lexicons, or unavailable pretrained checkpoints as the default plan.
+- Avoid using post-competition test labels or any file containing held-out labels for training, validation, blending, or row filtering. Treat such labels as unavailable for a legitimate competition solution.
+- Avoid naive random validation that leaves rare labels poorly represented. Rare-label AUC is too unstable without fold balance.
+- Avoid overfitted blend weights, especially many base models with tiny OOF gains. Use simple nonnegative weights and compare to equal/rank averaging.
+- Delay pseudo-labeling, stacking, label-dependency constraints, and domain-adaptive MLM until a strong OOF-validated sparse ensemble exists.
+- Delay complex neural tricks such as adversarial training, LLM classifiers, or large multi-architecture transformer ensembles unless the sparse-plus-one-transformer route has plateaued and OOF supports the added complexity.

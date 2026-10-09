@@ -1,0 +1,140 @@
+{
+  "schema": "us009-runner-supervisor-review.v1",
+  "reviewed_preparation_commit": "4c9326e210ee29e36f723ab7aff41543bf8c4586",
+  "working_implementation_source_sha256": {
+    "research/contracts/budget.py": "90fbbec8bfd0b3a8a2b706d165d87ed128dc5582a7f42c1d4aa1f0e295d31a23",
+    "research/adapters/sandbox_eval_client.py": "e239b31de491fd5e8db3360e209661cfcc01ba6c4388d47709629f2d7f5c78f1",
+    "research/search/acceptance.py": "2d0f9fe0dfcfd917698218a65d7166d2bd43a16ff3bf7023c1da487f84c7e1dd",
+    "research/search/acceptance_inner.py": "8f3fcef0a601fbb82f7de6443cbb3f80ba5b0a070cf4b269cba00a34a989479a",
+    "research/search/acceptance_config.py": "075de98ee434f3ada5aa8d8f9e4356ef658c6b100eb67e798a62fd9b5476ac41",
+    "research/search/credentials.py": "907b2f6a442502682a08ea368d271e89b4e7c076d796b2020cd168f69eaa0c04",
+    "research/search/run_index.py": "49427481603005b791511b6be742c25f0e80e149aba86f870cda82808c5168e2",
+    "research/search/sandbox_task.py": "a5754c96e6ade34e7b0c3305c06d503e9708bfc2978da751d425bea7e8b3e05b",
+    "research/search/budget_transport.py": "85cb0f88b0f8112524d24b317db620632c90bf9d25112c5b19853e295c661fdc",
+    "research/search/run_control.py": "c5a2f0d8301fb3ba80997c3a9067ecebaffaa0f249c6e116a40e3e25ecd32cb2",
+    "OpenMLE-Evo/tts_search/configs/experiment/trustworthy_validation.yaml": "faacb4acba36f136c2ae6f56190447d69f99f4187984f63d3f76c00fee55c75c",
+    "OpenMLE-Evo/tts_search/configs/litellm/trustworthy_kimi.yaml": "417106af92c5e7708d8b53b5c1be64abe3e28d1a8b7218254fd1a7430154aa97"
+  },
+  "review_status": "verified_preparation_only",
+  "real_acceptance_model_requests": 0,
+  "real_acceptance_ledger_created": false,
+  "story_us009_complete": false,
+  "validation": {
+    "research_tests_passed": 788,
+    "evo_tests_passed": 135,
+    "evo_tests_skipped": 2,
+    "evo_unchanged_baseline_failures": [
+      "test_gym_package_paths::test_same_parquet_is_consumed_by_existing_sft_builder"
+    ],
+    "typecheck_source_files_clean": 48,
+    "secret_audit": "pass",
+    "native_ask_tell_offline": {
+      "offline_synthetic_fitness_only": true,
+      "not_real_acceptance_evidence": true,
+      "native_algorithm_module": "istratde.algorithms.jax.istratde",
+      "population_shape": [
+        4,
+        5
+      ],
+      "fitness_supplied": [
+        -0.5,
+        -0.6,
+        -0.7,
+        -0.8
+      ],
+      "native_fitness_after_tell": [
+        -0.5,
+        -0.6000000238418579,
+        -0.699999988079071,
+        -0.800000011920929
+      ],
+      "native_tell_completed": true,
+      "model_requests": 0,
+      "sandbox_jobs": 0
+    },
+    "clean_inner_environment_model_catalog": {
+      "clean_inner_environment": true,
+      "auth_valid": true,
+      "model_catalog_http_status": 200,
+      "selected_model_available": true,
+      "model": "k3",
+      "model_requests": 0,
+      "acceptance_ledger_created": false
+    },
+    "fixed_sklearn_fixture": {
+      "job_id": "job_1344354d916b4209",
+      "score": 0.9,
+      "metric": "accuracy",
+      "candidate_uid": 65432,
+      "model_requests": 0,
+      "not_real_model_acceptance": true
+    },
+    "prediction_snapshot_bytes_verified": true,
+    "deployment_boundary_issues": [],
+    "old_stack_preserved": [
+      {
+        "name": "sandbox_api",
+        "status": "running",
+        "started_at": "2026-09-29T08:09:15.79152544Z",
+        "health": null
+      },
+      {
+        "name": "sandbox_dispatcher",
+        "status": "running",
+        "started_at": "2026-09-29T15:18:43.646516469Z",
+        "health": null
+      },
+      {
+        "name": "sandbox_nginx",
+        "status": "running",
+        "started_at": "2026-09-29T08:09:15.775130785Z",
+        "health": null
+      },
+      {
+        "name": "sandbox_postgres",
+        "status": "running",
+        "started_at": "2026-09-29T08:09:15.794341944Z",
+        "health": null
+      },
+      {
+        "name": "sandbox_redis",
+        "status": "running",
+        "started_at": "2026-09-29T08:09:15.788644723Z",
+        "health": null
+      },
+      {
+        "name": "ml-sandbox-gpu-0",
+        "status": "running",
+        "started_at": "2026-09-29T08:56:08.113386715Z",
+        "health": "healthy"
+      }
+    ],
+    "test_helper_cleanup": {
+      "test_helpers": [
+        {
+          "pid": 74712,
+          "port": 44174,
+          "status": "stopped"
+        },
+        {
+          "pid": 75069,
+          "port": 42998,
+          "status": "stopped"
+        }
+      ],
+      "original_supervisor_helper_preserved_healthy": true,
+      "model_requests": 0
+    }
+  },
+  "refinements": [
+    "one_generation_attempt_per_operator_for_fresh_auth",
+    "owned_auth_helper_closed_in_finally",
+    "cache_hit_zero_cost_verified_against_ledger"
+  ],
+  "reviewed_at_epoch": 1791483310.8303936,
+  "limitations": [
+    "Live model acceptance has not run; offline fixtures do not replace it.",
+    "Mid-POST unknown job identity is unproven and refuses continuation.",
+    "Provider generation is not deterministic; inner and outer search RNGs are seeded."
+  ]
+}

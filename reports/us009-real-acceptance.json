@@ -1,0 +1,764 @@
+{
+  "accounting": {
+    "actual_sandbox_jobs": 7,
+    "complete_inner_runs": 1,
+    "debug_calls": 8,
+    "main_operator_calls": 9,
+    "partial_inner_runs_with_model_calls": 1,
+    "runs_refused_without_model_calls": 2,
+    "verified_cache_hits": 1
+  },
+  "budget": {
+    "actual": {
+      "requests": 17,
+      "tokens": 81717
+    },
+    "elapsed_at_stop_seconds": 1530.2291491031647,
+    "ledger_sha256": "59c236e8261dd3565dabca9f756dd806f44625cb38b8b89452e16adefe88ff65",
+    "limits": {
+      "max_elapsed_seconds": 5400.0,
+      "max_requests": 30,
+      "max_tokens": 200000
+    },
+    "open_reservations": 0,
+    "requests_with_output_at_4096_cap": 10,
+    "stopped": {
+      "at": 1791485451.2612658,
+      "reason": "search_stopped:KeyboardInterrupt"
+    }
+  },
+  "cache_events": [
+    {
+      "identity_key": "64cc83ed28bb30b4dd84ded53a188eae7ea01e4d141f2d534df1ccf2861e2c26",
+      "incremental_model_cost": {
+        "requests": 0,
+        "tokens": 0
+      },
+      "origin_run": "runs/cfg0",
+      "outer_position": 0,
+      "run_result_sha256": "6bb415c7b294bec73bc737b3232a490ab3a92f067a26c5f14e0000e9f1e286b8",
+      "verified_committed_after": {
+        "requests": 11,
+        "tokens": 51636
+      },
+      "verified_committed_before": {
+        "requests": 11,
+        "tokens": 51636
+      }
+    }
+  ],
+  "final_health": {
+    "acceptance_processes_exited": true,
+    "checked_at": 1791485586.0268874,
+    "model_calls": 0,
+    "new_stack_boundary": {
+      "containers": [
+        {
+          "cap_add": [
+            "CAP_KILL",
+            "CAP_SETGID",
+            "CAP_SETUID"
+          ],
+          "cap_drop": [
+            "ALL"
+          ],
+          "environment_names": [
+            "RSI_WORKER_SCRATCH_ROOT",
+            "PYTHONDONTWRITEBYTECODE",
+            "RSI_WORKER_HOST",
+            "RSI_WORKER_PORT",
+            "RSI_WORKER_CONTAINER",
+            "RSI_WORKER_CANDIDATE_UID",
+            "RSI_WORKER_CANDIDATE_GID",
+            "RSI_WORKER_CONTROL_KEY_FILE",
+            "PATH",
+            "DEBIAN_FRONTEND",
+            "USER",
+            "USER_UID",
+            "USER_GID",
+            "DISPLAY",
+            "DISPLAY_WIDTH",
+            "DISPLAY_HEIGHT",
+            "DISPLAY_DEPTH",
+            "XDG_RUNTIME_DIR",
+            "BROWSER_EXECUTABLE_PATH",
+            "BROWSER_REMOTE_DEBUGGING_PORT",
+            "BROWSER_COMMANDLINE_ARGS",
+            "BROWSER_EXTRA_ARGS",
+            "DNS_OVER_HTTPS_TEMPLATES",
+            "LOG_DIR",
+            "JWT_PUBLIC_KEY",
+            "VNC_SERVER_PORT",
+            "WEBSOCKET_PROXY_PORT",
+            "GEM_SERVER_PORT",
+            "MCP_SERVER_PORT",
+            "PUBLIC_PORT",
+            "AUTH_BACKEND_PORT",
+            "WAIT_PORTS",
+            "WAIT_TIMEOUT",
+            "WAIT_INTERVAL",
+            "MCP_HUB_PORT",
+            "SANDBOX_SRV_PORT",
+            "JUPYTER_LAB_PORT",
+            "CODE_SERVER_PORT",
+            "MCP_SERVER_BROWSER_PORT",
+            "TINYPROXY_PORT",
+            "MCP_SERVER_CHROME_DEVTOOLS_PORT",
+            "MAX_SHELL_SESSIONS",
+            "LANG",
+            "TZ",
+            "LANGUAGE",
+            "LC_ALL",
+            "PUPPETEER_EXECUTABLE_PATH",
+            "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD",
+            "BROWSER_NO_SANDBOX",
+            "BROWSER_USER_AGENT",
+            "UV_TOOL_BIN_DIR",
+            "UV_TOOL_DIR",
+            "XLA_FLAGS"
+          ],
+          "memory": 4294967296,
+          "mounts": [
+            {
+              "source": "<repo-root>/.runtime/rsi-trustworthy/worker_control_key",
+              "target": "/run/rsi_control/key",
+              "type": "bind",
+              "writable": false
+            },
+            {
+              "source": "<repo-root>/.runtime/rsi-trustworthy/storage/mlsandbox/jobs",
+              "target": "/mnt/rsi_storage/mlsandbox/jobs",
+              "type": "bind",
+              "writable": false
+            },
+            {
+              "source": "<repo-root>/.runtime/rsi-trustworthy/storage/mlsandbox/uploads",
+              "target": "/mnt/rsi_storage/mlsandbox/uploads",
+              "type": "bind",
+              "writable": false
+            },
+            {
+              "source": "<repo-root>/tasks/hello_synth/data/public",
+              "target": "/mnt/rsi_data/hello_synth/data/public",
+              "type": "bind",
+              "writable": false
+            },
+            {
+              "source": "<repo-root>/.runtime/rsi-trustworthy/workdir",
+              "target": "/mnt/local_sandbox_workdir",
+              "type": "bind",
+              "writable": true
+            },
+            {
+              "source": "<repo-root>/deploy/rsi-trustworthy/worker/minimal_worker.py",
+              "target": "/opt/rsi_worker/minimal_worker.py",
+              "type": "bind",
+              "writable": false
+            },
+            {
+              "source": "<repo-root>/deploy/rsi-trustworthy/worker/exec_trampoline.py",
+              "target": "/opt/rsi_worker/exec_trampoline.py",
+              "type": "bind",
+              "writable": false
+            }
+          ],
+          "nano_cpus": 2000000000,
+          "networks": [
+            "rsi-trustworthy_execution"
+          ],
+          "pids": 128,
+          "ports": {},
+          "privileged": false,
+          "readonly_rootfs": true,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "service": "worker",
+          "status": "running"
+        },
+        {
+          "cap_add": null,
+          "cap_drop": null,
+          "memory": 0,
+          "mounts": [
+            {
+              "source": "<repo-root>/sandbox-controller/task_dispatcher",
+              "target": "/app",
+              "type": "bind",
+              "writable": false
+            },
+            {
+              "source": "<repo-root>/deploy/rsi-trustworthy/config/sandbox_config.json",
+              "target": "/app/config/sandbox_config.json",
+              "type": "bind",
+              "writable": false
+            },
+            {
+              "source": "<repo-root>/research",
+              "target": "/opt/rsi_repo/research",
+              "type": "bind",
+              "writable": false
+            },
+            {
+              "source": "<repo-root>/.runtime/rsi-trustworthy/worker_control_key",
+              "target": "/run/rsi_control/key",
+              "type": "bind",
+              "writable": false
+            },
+            {
+              "source": "<repo-root>/.runtime/rsi-trustworthy/storage",
+              "target": "/mnt/rsi_storage",
+              "type": "bind",
+              "writable": true
+            },
+            {
+              "source": "<repo-root>/.runtime/rsi-trustworthy/workdir",
+              "target": "/mnt/local_sandbox_workdir",
+              "type": "bind",
+              "writable": true
+            }
+          ],
+          "nano_cpus": 0,
+          "networks": [
+            "rsi-trustworthy_control",
+            "rsi-trustworthy_execution"
+          ],
+          "pids": null,
+          "ports": {},
+          "privileged": false,
+          "readonly_rootfs": false,
+          "security_opt": null,
+          "service": "dispatcher",
+          "status": "running"
+        },
+        {
+          "cap_add": null,
+          "cap_drop": null,
+          "memory": 0,
+          "mounts": [
+            {
+              "source": "<repo-root>/deploy/rsi-trustworthy/nginx/nginx.conf",
+              "target": "/etc/nginx/conf.d/default.conf",
+              "type": "bind",
+              "writable": false
+            },
+            {
+              "source": "<repo-root>/deploy/rsi-trustworthy/nginx/nginx-main.conf",
+              "target": "/etc/nginx/nginx.conf",
+              "type": "bind",
+              "writable": false
+            }
+          ],
+          "nano_cpus": 0,
+          "networks": [
+            "rsi-trustworthy_control",
+            "rsi-trustworthy_edge"
+          ],
+          "pids": null,
+          "ports": {
+            "80/tcp": [
+              {
+                "HostIp": "127.0.0.1",
+                "HostPort": "6581"
+              }
+            ]
+          },
+          "privileged": false,
+          "readonly_rootfs": false,
+          "security_opt": null,
+          "service": "nginx",
+          "status": "running"
+        },
+        {
+          "cap_add": null,
+          "cap_drop": null,
+          "memory": 0,
+          "mounts": [
+            {
+              "source": "<repo-root>/sandbox-controller/api_server",
+              "target": "/app",
+              "type": "bind",
+              "writable": false
+            },
+            {
+              "source": "<repo-root>/research",
+              "target": "/opt/rsi_repo/research",
+              "type": "bind",
+              "writable": false
+            },
+            {
+              "source": "<repo-root>/.runtime/rsi-trustworthy/storage",
+              "target": "/mnt/rsi_storage",
+              "type": "bind",
+              "writable": true
+            }
+          ],
+          "nano_cpus": 0,
+          "networks": [
+            "rsi-trustworthy_control"
+          ],
+          "pids": null,
+          "ports": {},
+          "privileged": false,
+          "readonly_rootfs": false,
+          "security_opt": null,
+          "service": "api",
+          "status": "running"
+        },
+        {
+          "cap_add": null,
+          "cap_drop": null,
+          "memory": 0,
+          "mounts": [
+            {
+              "source": "/var/lib/docker/volumes/rsi-trustworthy_rsi_postgres_data/_data",
+              "target": "/var/lib/postgresql/data",
+              "type": "volume",
+              "writable": true
+            },
+            {
+              "source": "/run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/Ubuntu/131315f83e24452b304a82e9853684cfebaccd64396110eaf9099b93cc9b9d77",
+              "target": "/docker-entrypoint-initdb.d",
+              "type": "bind",
+              "writable": false
+            }
+          ],
+          "nano_cpus": 0,
+          "networks": [
+            "rsi-trustworthy_control"
+          ],
+          "pids": null,
+          "ports": {},
+          "privileged": false,
+          "readonly_rootfs": false,
+          "security_opt": null,
+          "service": "postgres",
+          "status": "running"
+        },
+        {
+          "cap_add": null,
+          "cap_drop": null,
+          "memory": 0,
+          "mounts": [
+            {
+              "source": "/var/lib/docker/volumes/34beb087389a8348f06fa59dd6fbc8761b0e2c11195659de17a80d0cc6b9765e/_data",
+              "target": "/data",
+              "type": "volume",
+              "writable": true
+            }
+          ],
+          "nano_cpus": 0,
+          "networks": [
+            "rsi-trustworthy_control"
+          ],
+          "pids": null,
+          "ports": {},
+          "privileged": false,
+          "readonly_rootfs": false,
+          "security_opt": null,
+          "service": "redis",
+          "status": "running"
+        }
+      ],
+      "issues": []
+    },
+    "no_unsettled_provider_usage": true,
+    "old_stack_preserved": [
+      {
+        "health": null,
+        "name": "sandbox_api",
+        "started_at": "2026-09-29T08:09:15.79152544Z",
+        "status": "running"
+      },
+      {
+        "health": null,
+        "name": "sandbox_dispatcher",
+        "started_at": "2026-09-29T15:18:43.646516469Z",
+        "status": "running"
+      },
+      {
+        "health": null,
+        "name": "sandbox_nginx",
+        "started_at": "2026-09-29T08:09:15.775130785Z",
+        "status": "running"
+      },
+      {
+        "health": null,
+        "name": "sandbox_postgres",
+        "started_at": "2026-09-29T08:09:15.794341944Z",
+        "status": "running"
+      },
+      {
+        "health": null,
+        "name": "sandbox_redis",
+        "started_at": "2026-09-29T08:09:15.788644723Z",
+        "status": "running"
+      },
+      {
+        "health": "healthy",
+        "name": "ml-sandbox-gpu-0",
+        "started_at": "2026-09-29T08:56:08.113386715Z",
+        "status": "running"
+      }
+    ],
+    "owned_auth_helper_stopped": true,
+    "schema": "us009-final-cleanup-health.v1"
+  },
+  "independent_evidence_audit": {
+    "checked_at": 1791485496.728536,
+    "committed": {
+      "requests": 17,
+      "tokens": 81717
+    },
+    "evidence_consistent": false,
+    "issues": [
+      "cfg1:operator_child_mismatch"
+    ],
+    "ledger_sha256": "59c236e8261dd3565dabca9f756dd806f44625cb38b8b89452e16adefe88ff65",
+    "limits": {
+      "max_elapsed_seconds": 5400.0,
+      "max_requests": 30,
+      "max_tokens": 200000
+    },
+    "live_phase_at_audit": "finished",
+    "no_superiority_claim": true,
+    "open_reservations": 0,
+    "operator_coverage": {
+      "crossover": 3,
+      "debug": 8,
+      "draft": 4,
+      "improve": 2
+    },
+    "runner_commit": "b388399e63512418a0d7821d8879de0a933bb482",
+    "runs": [
+      {
+        "best_score": 0.925,
+        "candidate_failure_reasons": {
+          "empty_candidate_code": 7
+        },
+        "generations_completed": 3,
+        "jobs": [
+          {
+            "job_id": "job_07791e5fef394766",
+            "prediction_sha256": "0254dd487d4398d6ff028a0c9373a7ec693934706566a90e2a7dedb086cf3a7d",
+            "score": 0.925,
+            "source_gate": {
+              "allowed": true,
+              "check_kind": "static_admission_filter",
+              "denials": [],
+              "entrypoint": "main.py",
+              "entrypoint_sha256": "659c751d29bcbb9910463c647167e6853e0d32f92d2fc4e99321b36f145cd836",
+              "policy_sha256": "967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e",
+              "policy_version": "source-gate.v2",
+              "security_boundary": false,
+              "source_sha256": "c21ab18c19952b5861d6f1c34d9e53e36a7e56f9e8dbb4d14808c7784d4323d1"
+            },
+            "source_identity_verified": true,
+            "status": "completed",
+            "worker_cleanup_verified": true
+          },
+          {
+            "job_id": "job_1c1edf725bea452c",
+            "prediction_sha256": "caf9d90a4dc66053fb385e91a7da714fd3791ae9e4197f806da74a95f9171f94",
+            "score": 0.825,
+            "source_gate": {
+              "allowed": true,
+              "check_kind": "static_admission_filter",
+              "denials": [],
+              "entrypoint": "main.py",
+              "entrypoint_sha256": "8747ba46221f9af13f5c99ebc21f5329710b826ad900ac9dd19ae43552b774c7",
+              "policy_sha256": "967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e",
+              "policy_version": "source-gate.v2",
+              "security_boundary": false,
+              "source_sha256": "090aac475c9476419d980c700f9d560bd4ef93e56405ae479f01b24dc5eafd28"
+            },
+            "source_identity_verified": true,
+            "status": "completed",
+            "worker_cleanup_verified": true
+          },
+          {
+            "job_id": "job_9d5f9f068c61490c",
+            "prediction_sha256": "870d1e1740d3d6600cba06637d48d97c7d5580db4e6fd15eb5097a187c7d2aba",
+            "score": 0.875,
+            "source_gate": {
+              "allowed": true,
+              "check_kind": "static_admission_filter",
+              "denials": [],
+              "entrypoint": "main.py",
+              "entrypoint_sha256": "639e2aa06c4c202800d723f34c14da0bcef63231b094871c4387e44293cd9e60",
+              "policy_sha256": "967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e",
+              "policy_version": "source-gate.v2",
+              "security_boundary": false,
+              "source_sha256": "bdfc6f034c19097976e5911385f69d5b0555a971f6fbfd849e1293612bcfd464"
+            },
+            "source_identity_verified": true,
+            "status": "completed",
+            "worker_cleanup_verified": true
+          },
+          {
+            "job_id": "job_f594c2cc637649e1",
+            "prediction_sha256": "078a596e12cbb48f4c06c05fd7aec9782bb7f0555ccd5b5590606ce8f595f084",
+            "score": 0.9,
+            "source_gate": {
+              "allowed": true,
+              "check_kind": "static_admission_filter",
+              "denials": [],
+              "entrypoint": "main.py",
+              "entrypoint_sha256": "ea1e379f4e18ca0c68ae3a985f7c98e65cc2d8a6024b1d366eedb56f7848a96d",
+              "policy_sha256": "967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e",
+              "policy_version": "source-gate.v2",
+              "security_boundary": false,
+              "source_sha256": "39ae28ec7da0e2d5256a7425b7cf552f24e75f687386af18650fa5b6ba2a82d7"
+            },
+            "source_identity_verified": true,
+            "status": "completed",
+            "worker_cleanup_verified": true
+          }
+        ],
+        "main_candidates": 6,
+        "model_usage": {
+          "requests_delta": 11,
+          "tokens_delta": 51636
+        },
+        "operator_counts": {
+          "crossover": 3,
+          "debug": 5,
+          "draft": 2,
+          "improve": 1
+        },
+        "run": "cfg0",
+        "run_result_sha256": "6bb415c7b294bec73bc737b3232a490ab3a92f067a26c5f14e0000e9f1e286b8",
+        "status": "completed",
+        "termination": "completed"
+      },
+      {
+        "best_score": null,
+        "candidate_failure_reasons": {
+          "empty_candidate_code": 2,
+          "failed: ": 1
+        },
+        "generations_completed": 1,
+        "jobs": [
+          {
+            "job_id": "job_1f939beabcc44468",
+            "prediction_sha256": null,
+            "score": null,
+            "source_gate": {
+              "allowed": true,
+              "check_kind": "static_admission_filter",
+              "denials": [],
+              "entrypoint": "main.py",
+              "entrypoint_sha256": "254e681cd1723525d482c2de45e6b2f21313f562e9251a2fe327f24ace3c1472",
+              "policy_sha256": "967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e",
+              "policy_version": "source-gate.v2",
+              "security_boundary": false,
+              "source_sha256": "55b780ba107233eefc22ee76e68d7373ae955953070962ccf1cc071421b76d7e"
+            },
+            "source_identity_verified": true,
+            "status": "failed",
+            "worker_cleanup_verified": true
+          },
+          {
+            "job_id": "job_47508e408057485b",
+            "prediction_sha256": "078a596e12cbb48f4c06c05fd7aec9782bb7f0555ccd5b5590606ce8f595f084",
+            "score": 0.9,
+            "source_gate": {
+              "allowed": true,
+              "check_kind": "static_admission_filter",
+              "denials": [],
+              "entrypoint": "main.py",
+              "entrypoint_sha256": "f3f9a208577a062008d920a6867df438cbd65a95757798b04a8f8c6e5e42ee9e",
+              "policy_sha256": "967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e",
+              "policy_version": "source-gate.v2",
+              "security_boundary": false,
+              "source_sha256": "01b2b93ca9469edf617dd16249b1cedbe201371435d5878c12985b10c5ea6c69"
+            },
+            "source_identity_verified": true,
+            "status": "completed",
+            "worker_cleanup_verified": true
+          },
+          {
+            "job_id": "job_d3a1b8d9d904458b",
+            "prediction_sha256": "a2e64ef7d52fd2ed7c4b606f5b9abd342fdc006bfcdc17d84212d442cae99da2",
+            "score": 0.875,
+            "source_gate": {
+              "allowed": true,
+              "check_kind": "static_admission_filter",
+              "denials": [],
+              "entrypoint": "main.py",
+              "entrypoint_sha256": "a183f7bed6411b72e99a542a8cb3204a0371a7aaca07efbc8254b1e43fda3330",
+              "policy_sha256": "967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e",
+              "policy_version": "source-gate.v2",
+              "security_boundary": false,
+              "source_sha256": "48f11685659ad3453769fc18d1a41c7abd55d8309c53c67459726d1ce089b8ed"
+            },
+            "source_identity_verified": true,
+            "status": "completed",
+            "worker_cleanup_verified": true
+          }
+        ],
+        "main_candidates": 3,
+        "model_usage": {
+          "requests_delta": 6,
+          "tokens_delta": 30081
+        },
+        "operator_counts": {
+          "debug": 3,
+          "draft": 2,
+          "improve": 1
+        },
+        "run": "cfg1",
+        "run_result_sha256": "f7d8f68c3061c118d27b08e22c7968c5bf653e0fedcc1459e3629e7139ab05b2",
+        "status": "failed",
+        "termination": "KeyboardInterrupt"
+      },
+      {
+        "best_score": null,
+        "candidate_failure_reasons": {},
+        "generations_completed": 0,
+        "jobs": [],
+        "main_candidates": 0,
+        "model_usage": {
+          "requests_delta": 0,
+          "tokens_delta": 0
+        },
+        "operator_counts": {},
+        "run": "cfg2",
+        "run_result_sha256": "c143af8496beef5de3507738a01cb5c20e44810cedbbbcf9d61ffc5075e4f033",
+        "status": "failed",
+        "termination": "LedgerStopped"
+      },
+      {
+        "best_score": null,
+        "candidate_failure_reasons": {},
+        "generations_completed": 0,
+        "jobs": [],
+        "main_candidates": 0,
+        "model_usage": {
+          "requests_delta": 0,
+          "tokens_delta": 0
+        },
+        "operator_counts": {},
+        "run": "cfg3",
+        "run_result_sha256": "85e3b61e9a655ed0f1bee5bc9c1170daf3386e079becc04a042b65d8c99dbeef",
+        "status": "failed",
+        "termination": "LedgerStopped"
+      }
+    ],
+    "schema": "us009-independent-evidence-audit.v1",
+    "stopped": {
+      "at": 1791485451.2612658,
+      "reason": "search_stopped:KeyboardInterrupt"
+    }
+  },
+  "integrity_limitation": {
+    "node_id": "f90d95cb0917421d8e949abd573e5aff",
+    "reason": "Graceful interrupt occurred after the final debug trace but before the node entered the journal. Its request usage is settled, but this unscored node has no complete code artifact and is not accepted or cached.",
+    "run": "cfg1",
+    "verified_scored_jobs": 7
+  },
+  "next_steps_require_new_user_direction": [
+    "Do not resume or reset the stopped ledger.",
+    "Diagnose truncated/invalid generation offline before proposing another acceptance profile.",
+    "Do not switch the default endpoint or start US010 until a newly authorized real acceptance passes."
+  ],
+  "no_superiority_claim": true,
+  "operator_coverage": {
+    "crossover": 3,
+    "debug": 8,
+    "draft": 4,
+    "improve": 2
+  },
+  "outer": {
+    "algorithm": "istratde",
+    "fitness": [
+      -0.925,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "fitness_mapping": "fitness=-accuracy (native minimize)",
+    "fully_evaluated_population": false,
+    "note": "Native tell executed with three failure penalties of zero. This does not satisfy the required fully evaluated real outer acceptance. Raw inner_evaluations.fresh=4 counts child invocations; only two used the model and only one completed.",
+    "outer_steps_completed": 1,
+    "pop_size": 4,
+    "seed": 42
+  },
+  "pre_run_validation": {
+    "evo_tests_passed": 135,
+    "evo_tests_skipped": 2,
+    "mypy_clean_modules": 48,
+    "research_tests_passed": 788,
+    "source_changed_during_run": false,
+    "unchanged_baseline_failure": "test_gym_package_paths::test_same_parquet_is_consumed_by_existing_sft_builder (missing prior SFT build_tasks.py)"
+  },
+  "reason": "remaining_request_budget_cannot_cover_minimum_outer_population",
+  "runner_commit": "b388399e63512418a0d7821d8879de0a933bb482",
+  "runtime_evidence_sha256": {
+    ".runtime/acceptance-us009/acceptance-summary.json": "05ab1ec5f5afe66f13b1ab5be6f7974c463510d64c1090633a841f761ef83644",
+    ".runtime/acceptance-us009/budget-ledger.json": "59c236e8261dd3565dabca9f756dd806f44625cb38b8b89452e16adefe88ff65",
+    ".runtime/acceptance-us009/run-index.json": "032f79a2710368b4e27862c9755d42c69cdcbab14a00dccf56cd0017c63495e4",
+    ".runtime/acceptance-us009/runs/cfg0/checkpoint/journal.jsonl": "8f0bd51c3ad2a21d19fb8c78518b8c95bcad79427c23446d9432f875093828f4",
+    ".runtime/acceptance-us009/runs/cfg0/checkpoint/state.json": "37dea73c2fc2054d6cf46454808656d8576b866198b165e4498cc874b48d4720",
+    ".runtime/acceptance-us009/runs/cfg0/emergency-cleanup.json": "bf8a3cf66730abaf82583f80e017bee6caf93674ef9bb62c8b5285458f570430",
+    ".runtime/acceptance-us009/runs/cfg0/journal.jsonl": "8f0bd51c3ad2a21d19fb8c78518b8c95bcad79427c23446d9432f875093828f4",
+    ".runtime/acceptance-us009/runs/cfg0/live-jobs.json": "254b77c33129c6600d7befb466f9ff48364d6bef7e601c4df762ab494667795b",
+    ".runtime/acceptance-us009/runs/cfg0/operator-trace.jsonl": "5c3db13e57adec59fed3a16cb8619c48c0f539e0d7d440ddee2c5d0782e554af",
+    ".runtime/acceptance-us009/runs/cfg0/predictions/job_07791e5fef394766.csv": "0254dd487d4398d6ff028a0c9373a7ec693934706566a90e2a7dedb086cf3a7d",
+    ".runtime/acceptance-us009/runs/cfg0/predictions/job_1c1edf725bea452c.csv": "caf9d90a4dc66053fb385e91a7da714fd3791ae9e4197f806da74a95f9171f94",
+    ".runtime/acceptance-us009/runs/cfg0/predictions/job_9d5f9f068c61490c.csv": "870d1e1740d3d6600cba06637d48d97c7d5580db4e6fd15eb5097a187c7d2aba",
+    ".runtime/acceptance-us009/runs/cfg0/predictions/job_f594c2cc637649e1.csv": "078a596e12cbb48f4c06c05fd7aec9782bb7f0555ccd5b5590606ce8f595f084",
+    ".runtime/acceptance-us009/runs/cfg0/request-trace.jsonl": "de73116877bc32bbf9de6284ede64a63db817037be5650688dcd0efcf0633d6d",
+    ".runtime/acceptance-us009/runs/cfg0/run-result.json": "6bb415c7b294bec73bc737b3232a490ab3a92f067a26c5f14e0000e9f1e286b8",
+    ".runtime/acceptance-us009/runs/cfg0/run-spec.json": "3ba5c7bb5b739bf28b89107185c7e4058d106792843f3b4deab2b369a187fe13",
+    ".runtime/acceptance-us009/runs/cfg0/search-control-checkpoint.json": "19fb73cee3982c2af86e159f0b1c357136da4fc5ec2ee9b050f98acdac8145f9",
+    ".runtime/acceptance-us009/runs/cfg1/checkpoint/journal.jsonl": "0c6607201fa29bc6032cb610244fcf98653322bd604a35f02ec15e3ef601ec36",
+    ".runtime/acceptance-us009/runs/cfg1/checkpoint/state.json": "a7a12ba9ea3883222de700370b0a376d5f69a75fbbcf9f75afee7cb22b378f9b",
+    ".runtime/acceptance-us009/runs/cfg1/emergency-cleanup.json": "d7c39e9d1f048c0f39048ea6738f5ac17f281963f7412ea956076bd322a9791c",
+    ".runtime/acceptance-us009/runs/cfg1/journal.jsonl": "0c6607201fa29bc6032cb610244fcf98653322bd604a35f02ec15e3ef601ec36",
+    ".runtime/acceptance-us009/runs/cfg1/live-jobs.json": "5f072f7aebae1b4d03f172418509ca7a9542f8c3896fc99b4d3d86b7d20205a5",
+    ".runtime/acceptance-us009/runs/cfg1/operator-trace.jsonl": "0cec2efa39075935085ca40581ba6468e35416a74e24d2a412dd332b5fd32022",
+    ".runtime/acceptance-us009/runs/cfg1/predictions/job_47508e408057485b.csv": "078a596e12cbb48f4c06c05fd7aec9782bb7f0555ccd5b5590606ce8f595f084",
+    ".runtime/acceptance-us009/runs/cfg1/predictions/job_d3a1b8d9d904458b.csv": "a2e64ef7d52fd2ed7c4b606f5b9abd342fdc006bfcdc17d84212d442cae99da2",
+    ".runtime/acceptance-us009/runs/cfg1/request-trace.jsonl": "55f2745a8be88b4a7805707764936daf99be2621e90608187d9256496c744afd",
+    ".runtime/acceptance-us009/runs/cfg1/run-result.json": "f7d8f68c3061c118d27b08e22c7968c5bf653e0fedcc1459e3629e7139ab05b2",
+    ".runtime/acceptance-us009/runs/cfg1/run-spec.json": "7654e2a7f13b6dc2bd7331f2767d653f8dc16f83dd7929b6f79cd6cff4a60aa4",
+    ".runtime/acceptance-us009/runs/cfg1/search-control-checkpoint.json": "7eb01308ab0830fb22a4d622718cbd124ad12527a5312d6ba4404e8423c0cfac",
+    ".runtime/acceptance-us009/runs/cfg2/checkpoint/journal.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".runtime/acceptance-us009/runs/cfg2/checkpoint/state.json": "6b202dde94200081790fecd3638e6a532f304d449b7456852a06514fa163fe0b",
+    ".runtime/acceptance-us009/runs/cfg2/emergency-cleanup.json": "5354bee6d467827a44127802c2da7f906f31519726b2e52094e3fe74f1e34b6b",
+    ".runtime/acceptance-us009/runs/cfg2/journal.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".runtime/acceptance-us009/runs/cfg2/live-jobs.json": "47a7877dad2b85181354a0632cf304620959d0a60c5a67cd30aff6f49b92f4a4",
+    ".runtime/acceptance-us009/runs/cfg2/run-result.json": "c143af8496beef5de3507738a01cb5c20e44810cedbbbcf9d61ffc5075e4f033",
+    ".runtime/acceptance-us009/runs/cfg2/run-spec.json": "edac553c640bdae9c3dd5e3c2443f5feb6c0411f8c0595ffcff81c8a7113afa9",
+    ".runtime/acceptance-us009/runs/cfg2/search-control-checkpoint.json": "d0777760b7c2554bf101db3f1420cd083532bccecd8fa67c2e8c0088e9c4de3f",
+    ".runtime/acceptance-us009/runs/cfg3/checkpoint/journal.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".runtime/acceptance-us009/runs/cfg3/checkpoint/state.json": "6b202dde94200081790fecd3638e6a532f304d449b7456852a06514fa163fe0b",
+    ".runtime/acceptance-us009/runs/cfg3/emergency-cleanup.json": "928300411ec2e9b61fcaf44e2d6690ceba95fd30d8da98513b0457392701ce63",
+    ".runtime/acceptance-us009/runs/cfg3/journal.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".runtime/acceptance-us009/runs/cfg3/live-jobs.json": "b0a43c4c8aba62e9cd16d08f6bfe4654dbbeb62f19285cc9539722883927604f",
+    ".runtime/acceptance-us009/runs/cfg3/run-result.json": "85e3b61e9a655ed0f1bee5bc9c1170daf3386e079becc04a042b65d8c99dbeef",
+    ".runtime/acceptance-us009/runs/cfg3/run-spec.json": "3c66b47966b4d9d136ab1145b607056405c892545e690147066ef47261ecd0f8",
+    ".runtime/acceptance-us009/runs/cfg3/search-control-checkpoint.json": "8faa7b6fdef701d52416cd6526ed5da4c8b62874d7474a2c15f242bcf81015c1"
+  },
+  "schema": "us009-supervisor-final-verdict.v1",
+  "stop_decision": {
+    "action": "SIGINT_to_owned_inner_after_all_provider_usage_settled",
+    "committed_at_signal": {
+      "requests": 17,
+      "tokens": 81717
+    },
+    "completed_debug_requests_at_decision": 7,
+    "minimum_main_requests": 24,
+    "minimum_total_requests": 31,
+    "open_reservations_at_signal": 0,
+    "outcome": "graceful_interrupt_sent",
+    "pid": 79704,
+    "reason": "remaining_requests_insufficient_for_minimum_outer",
+    "request_limit": 30,
+    "signalled_at": 1791485451.2609582
+  },
+  "story_us009_passes": false,
+  "story_us010_started": false,
+  "verdict": "INCOMPLETE"
+}

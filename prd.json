@@ -1,0 +1,147 @@
+{
+  "project": "Trustworthy RSI minimum loop",
+  "branchName": "ralph/trustworthy-rsi",
+  "description": "User-approved plan: reproducible WSL sources, real search activation and pre-execution safety with bounded evaluation.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "工程基线与来源清单",
+      "description": "As a researcher I need 工程基线与来源清单 with verifiable evidence.",
+      "acceptanceCriteria": [
+        "Inventory WSL OpenRSI, legacy rsi-gpu and Windows deployed sources by path/hash; do not overwrite differing files blindly; keep credentials out of inventory output.",
+        "Consolidate legacy adapters and experiment scripts under research/ and iStratDE/MetaDE required src, pyproject and LICENSE under research/vendor; no venv, private data or historical generated code in Git; preserve origins and license notices.",
+        "Document environment dependencies and lock/snapshot versions without credentials. Existing venv may be reused for tests but repository paths must resolve relative to root.",
+        "Provide a reproducible secret/path audit and provenance manifest; git diff --check and focused import/type checks pass."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "2026-10-08: Consolidated legacy adapters/experiments under research/ and istratde+metade snapshots (src/pyproject/LICENSE/README, GPL-3.0 preserved) under research/vendor; venvs, formal_baseline data and secrets stay untracked. Evidence: research/provenance/{inventory-openrsi-wsl,inventory-rsi-gpu-legacy,inventory-windows-deployed,inventory-diff-wsl-vs-windows}.json (3-tree path/hash inventory; secret-named files never read; 16 intentional WSL-vs-Windows mismatches surfaced incl. 6 forward-sanitized OpenMLE-Gym files that embedded a mlsandbox key -> env/placeholders), research/provenance/manifest.json (all consolidated copies verified vs read-only origins, differences annotated), research/provenance/secret-audit.json (0 findings), venv freeze snapshots. Validation: pytest research/tests 50 passed; mypy (research/mypy.ini) no issues in 17 files; import checks on .venv-research and legacy rsi-gpu venv incl. vendored packages; git diff --check clean (.gitattributes preserves vendored upstream bytes)."
+    },
+    {
+      "id": "US-002",
+      "title": "旧实验独立审计",
+      "description": "As a researcher I need 旧实验独立审计 with verifiable evidence.",
+      "acceptanceCriteria": [
+        "Read original <legacy-root>/formal_baseline read-only; generate separate report without rewriting old records.",
+        "Verify 60 records,46 unique configs,14 cached,44 actual Evo runs,2 pre-run rejects; all actual operators are draft=44/debug=15; no improve/crossover.",
+        "Uncached recorded tokens=930962 and execution wall sum=15345.9 seconds; all-row tokens=1315148 is duplicate-inclusive, not cost. Distinguish score counts and cached results.",
+        "Meaningful tests for cached/failed records and missing fields; provide executable audit command, typecheck, tests and git diff --check."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "2026-10-08: Independent read-only audit of legacy <legacy-root>/formal_baseline via research/tools/audit_formal_baseline.py (root in tools/audit_formal_baseline_roots.json data file; refuses to write inside audited tree; fail-closed on missing fields/evidence/summary disagreement). All claims verified on original records: 60 records, 46 unique configs, 14 cached, 44 actual runs, 2 pre-run rejects (empty_parent_selection_weights); operators draft=44/debug=15 (+aux rich_memory_summary=30/analysis=18), no improve/crossover; uncached tokens=930962, uncached wall=15345.9s, all-row tokens=1315148 (duplicate-inclusive, +384186 recounted cache hits); scored=54 (41 uncached+13 cached), status totals success=54/code_execution_error=28; summary.json cross-checks pass. Evidence: reports/formal-baseline-audit/audit-report.json (verdict PASS, incl. sha256 of eval_log/summary). Validation: pytest research/tests 69 passed (incl. 18 new: cached/rejected/missing-field/orphan-dir/summary-mismatch fixtures + read-only legacy integration); mypy no issues in 2 files; secret audit AUDIT OK (0 violations); git diff --cached --check exit 0. Legacy tree untouched (byte-identical before/after, asserted in tests)."
+    },
+    {
+      "id": "US-003",
+      "title": "结果、缓存和预算契约",
+      "description": "As a researcher I need 结果、缓存和预算契约 with verifiable evidence.",
+      "acceptanceCriteria": [
+        "Define common result schema with metric direction, source hash, policy version, safety verdict, status/reason, cache origin and incremental costs; accuracy maximizes and logloss minimizes.",
+        "Missing artifacts, nonzero exit, nonfinite score, absent safety verdict fail closed; cache hit incurs zero incremental calls/tokens/time, retains original provenance. Cache key includes seed/model/task/data/metric/policy/config identities.",
+        "Persistent serial budget ledger enforces request reservation before EVERY model attempt including retries: 200000 tokens,30 requests,5400 elapsed seconds. Reserve conservative input estimate plus max output; retain reservation/stop on unknown usage. Never reset budget on restart.",
+        "Implement cancellation hooks for deadline, no new calls after stop, checkpoint resume and tests for all boundaries including restart and retry. No real model calls in this story. Typecheck and focused tests pass."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "2026-10-08: research/contracts/{results,cache,budget,persist}.py — EvaluationResult schema (metric direction accuracy=MAX/logloss=MIN, source/policy hashes, mandatory safety verdict, status/reason, cache origin, incremental costs), fail-closed finalize in fixed order; CacheIdentity binding seed/model/task/data/metric/policy/config hashes, zero incremental cost on hit with original provenance, corrupt cache fails closed; persistent serial BudgetLedger (flock sidecar + mutex, atomic writes) reserving conservative input+max output before EVERY attempt incl. retries, 200000 tokens/30 requests/5400s from persisted started_at, unknown usage retains reservation and stops, no reset. Supervisor regressions fixed: reopen with unresolved reservation stops; usage-parser exception retains+stops; limits persist in ledger (schema v2) and reopen cannot expand them; snapshot deep-copies state; closed ledger rejects all operations (elapsed check precedes stopped check to preserve the restart-elapsed contract). CancellationToken absolute deadline + persistent stop survive checkpoint roundtrip. Validation: pytest research/tests 155 passed (incl. 5 mandatory supervisor tests in test_budget_supervisor.py); supervisor reproducer review_budget.py -> SUPERVISOR_PROBES_PASS; mypy no issues in 28 files; secret audit AUDIT OK; git diff --check clean. No real model calls; wiring into transports/evaluator is US-004/005/007. Supervisor additionally hardened cache safety bool/policy/source consistency and verified 165 tests + budget failure probes after all changes.\nSupervisor numeric and corruption regressions repaired; full research suite 330 passed. Persisted lowered limits, strict finite/integer accounting and malformed usage stop verified.\nSupervisor added serial transport mutex, provider-usage-over-reservation stop, and input/output token event fields; two regressions failed before and 57 budget tests passed after. Included in 402 aggregate tests."
+    },
+    {
+      "id": "US-004",
+      "title": "统一执行前源码检查",
+      "description": "As a researcher I need 统一执行前源码检查 with verifiable evidence.",
+      "acceptanceCriteria": [
+        "Reusable versioned source policy checks immutable submitted bytes, hashes them and returns machine-readable denial; keyword matching alone must not be represented as a security boundary.",
+        "Wire both actual and deprecated Evo submission paths in OpenMLE-Evo/tts_search/reward_func_utils.py and API admission before writes/queue; cover inline code and code_file_path without TOCTOU; all draft/debug/improve/crossover use same gate.",
+        "Do not modify Windows live API. WSL API auth must read environment, never embed keys. Rejected inputs neither enqueue nor execute; missing policy/artifact fails closed.",
+        "Focused tests spy on enqueue and submit, exercise malicious markers/path inputs and legitimate ML code, plus typecheck. Preserve existing job query/cancel semantics."
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "2026-10-08: research/contracts/source_gate.py + versioned policy artifact source_policy.v1.json (now source-gate.v2): checks immutable submitted bytes (sha256 bound), machine-readable denials (rule+reason), verdict/policy frozen dataclasses, security_boundary=False explicit (keyword matching documented as advisory admission filter, never a boundary; real isolation is US-006/008 container contract). validate_job_fields: execution_command denied, requirements pinned PyPI-style only, environment keys denied (loader hijacks LD_*/PYTHONPATH/BASH_ENV; platform bypasses PATH/HOME/PYTHONHOME/PYTHONUSERBASE/CDPATH; server-assigned JOB_*/TRACE_ID/RESOURCE_TYPE/PRIORITY/EXECUTION_*; worker-control WORKER_*/REDIS_*/DB_*/POSTGRES_*/DOCKER_*/SANDBOX_API*; gate/evaluator/budget SOURCE_GATE_*/EVALUATOR_*/BUDGET_*), data_dir and path-valued env values (DATA_DIR/SANDBOX_DATA_DIR) traversal/protected-component checked. Evo wiring (both get_sandbox_result paths) unchanged and re-verified. Policy is a static artifact; search parameters never alter it.\nBATCH-2 REPAIR (supervisor instructions applied): api_server.py create_job_entry now wires source_snapshot.capture_source BEFORE any mkdir/write/move/enqueue for code_file_path: the unsafe _relocate_source_to_job helper is REMOVED (no more relocate/move-then-inspect of untrusted originals; original uploads are retained byte-for-byte, proven by test). Upload semantics preserved: entrypoint under UPLOAD_ROOT/<upload-id>/... captures the WHOLE upload tree once and materializes it once, mapping entrypoint/working_dir inside the captured tree; working_dir outside the captured artifact (and any working_dir with inline code) is rejected pre-write with machine-readable rule working_dir_outside_artifact. Whole-artifact hash plus entrypoint identity (entrypoint + entrypoint_sha256) bound into gate evidence; the materialized tree is re-captured and hash-verified against the captured verdict before enqueue (source_gate_verify_failed + job-dir removal on divergence). research/adapters/sandbox_eval_client.py now delegates to the SAME versioned gate (legacy FORBIDDEN_MARKERS kept as policy-derived alias) and validates data_dir/environment before any network. Validation: pytest research/tests 365 passed (incl. new API tests: upload retained+materialized with entrypoint evidence, upload mutated after capture cannot change executed bytes, materialized tamper -> verify_failed with no DB insert/Redis push/job dir, upload directory symlink denied pre-write, package entrypoint + working_dir mapping, data_dir traversal, PATH/HOME/PYTHONHOME/PYTHONUSERBASE/WORKER_* env denial, inline+working_dir denial; plus v2 policy field tests and adapter fail-closed/data_dir tests; 6 source-capture supervisor tests still pass); OpenMLE-Evo venv tests/test_source_gate_wiring.py + test_review_regressions.py 13 passed, full Evo suite 79 passed/2 skipped/1 pre-existing failure (test_same_parquet_is_consumed_by_existing_sft_builder, baseline-identical, unrelated). mypy research tree: no issues in 43 files; api_server.py mypy 7 errors == pre-change baseline (stash-verified identical error kinds). audit_secrets AUDIT OK; git diff --check clean. Limitations: gate remains an advisory static filter (enforcement is the container boundary, US-006/008); empty .py package files (e.g. empty __init__.py) are denied as empty_source (pre-existing gate semantic); working_dir is now restricted to the captured artifact (documented tightening); the running rsi-trustworthy stack has NOT been restarted to pick up the new WSL api_server bytes (new-stack restart belongs to the US-006 repair); Windows live API untouched.\nSupervisor added producer/consumer regression and explicit inline entrypoint_sha256, fixing tree-hash versus file-byte-hash mismatch. Real scoring now verifies the same submitted bytes."
+    },
+    {
+      "id": "US-005",
+      "title": "可信独立评分服务",
+      "description": "As a researcher I need 可信独立评分服务 with verifiable evidence.",
+      "acceptanceCriteria": [
+        "Implement evaluator separate from candidate worker; answers and trusted metric code are never mounted into worker, including via parent directory or alternate path.",
+        "Evaluator accepts bounded CSV prediction bytes plus allowlisted task ID, never runs submitted Python or imports candidate-supplied metrics. Reject symlinks, traversal, oversized and malformed files.",
+        "Integrate dispatcher to score externally after candidate process stops; validation/test split explicit; use synthetic hello_synth fixture. Trusted evaluator image/dependencies pinned and no model keys.",
+        "Unit/integration tests for scoring and tamper/read rejection; do not claim complete until US006/008 validates actual container boundary. Typecheck passes."
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "2026-10-08: research/evaluator/ — trusted controller-side scoring service (stdlib-only at scoring time, requirements.txt pin; no model keys). EvaluatorRegistry (evaluator-registry.v1) allowlists task IDs with pinned answer sha256, explicit split (validation/test), trusted in-repo metric names only (metrics.py: accuracy; untrusted metric name fails closed at load — candidate/task metric.py is never imported). score_submission accepts bounded CSV bytes + allowlisted task ID: machine-readable rejections task_not_allowlisted/prediction_oversized/prediction_malformed/submission_schema_mismatch/row/id/label_invalid/answer_integrity_failed (re-verified at score time). read_prediction_file rejects symlinks (incl. symlinked parents), '..' traversal, outside-root, non-regular files and oversize (lstat before read). validate_worker_mount_plan denies worker mounts of the evaluator root, its ancestors and any sub-path (symlink-resolved). hello_synth fixture: byte-identical copy of the synthetic legacy test_answer.csv (40 rows) with pinned hash. Dispatcher (WSL copy only): EXTERNAL_EVALUATOR_ENABLED=1 + EVALUATOR_REGISTRY_PATH fail closed at startup; execute_job scores via score_job_externally only AFTER the candidate sandbox session finished/cleaned up, from an immutable prediction_snapshot.csv of the exact bytes read once; evidence (task_id/split/metric/direction/score/prediction_sha256/answer_sha256/registry_version/snapshot) persisted in the job result; rejections -> scoring_failed with machine-readable reason. Validation: pytest research/tests 283 passed (47 new: 39 test_evaluator_service.py + 8 test_dispatcher_external_eval.py incl. exec-stop-before-score ordering, worker commands never reference registry/answers/read_and_metric, tamper/oversize/unknown-task failures, candidate metric never in sys.modules); mypy no issues in 37 files; task_dispatcher.py mypy 4 errors == pre-change baseline (verified via git stash); audit_secrets AUDIT OK; git diff --check clean (task_dispatcher.py CRLF->LF normalized to match HEAD, BOM preserved). Limitations: the actual container/mount boundary is NOT proven by this story — US-006/US-008 must validate it with real Docker tests; mount-plan validation is a pre-deploy check, not runtime isolation; old live stack (Windows mounts) unchanged; external mode deployed in US-006.\nSupervisor repaired prediction path races with pinned O_NOFOLLOW directory/file descriptors and max+1 reads; strict CSV malformed-quote regression. 44 focused evaluator tests passed, 330 aggregate tests. Actual runtime cleanup still depends on US006 repair."
+    },
+    {
+      "id": "US-006",
+      "title": "WSL 独立隔离部署",
+      "description": "As a researcher I need WSL 独立隔离部署 with verifiable evidence.",
+      "acceptanceCriteria": [
+        "New Compose project rsi-trustworthy, 127.0.0.1:6581 gateway, WSL source/data mounts, unique volumes. Keep all old containers/volumes/files unchanged.",
+        "One worker, unified mutex/lease across CPU/GPU queues. Worker has no published host ports or docker socket; public input read-only and per-job scratch only. Separate internal networks prevent worker access to DB/Redis/evaluator/gateway/model credentials or internet.",
+        "Default seccomp, bounded CPU/memory/pids/runtime, minimum capabilities. No unconfined/privileged fallback. Inspect actual worker image compatibility; record and repair any precise issue instead of broad weakening.",
+        "Create private local auth outside Git, expose no credential in output. Use trusted launch/testing commands outside candidate worker. Real docker compose config/up and inspect mount/port/security/network validation; old stack stays healthy."
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Supervisor-accepted after real failures were reproduced and repaired. Evidence: reports/trustworthy-stack-acceptance.json and reports/worker-gpu-validation.json. 402 research tests; mypy 23 new modules; 47 actual boundary checks; authenticated control, dedicated candidate UID65432/caps0, readonly rootfs, isolated execution bridge, proven detached-child/zombie cleanup, failed-cleanup fail-closed states, entrypoint identity verification, one CPU/GPU slot (actual execution intervals disjoint). Real GPU fixture job job_91274cb9176348c4 used RTX4060Ti, scored 0.55 with source_identity_verified and worker_cleanup_verified true. Old six containers healthy/untouched. Kimi repair iteration hit its programming timeout; supervisor completed exact diagnosed fixes. Existing 7 API+4 dispatcher type issues unchanged; no new ones. No real model acceptance requests yet.\nFinal implementation and validation commit: 7036780."
+    },
+    {
+      "id": "US-007",
+      "title": "搜索参数和算子生效证据",
+      "description": "As a researcher I need 搜索参数和算子生效证据 with verifiable evidence.",
+      "acceptanceCriteria": [
+        "Dedicated validation Evo config: >=3 inner generations and >=2 candidates each; trigger improve/crossover only with valid parents; distinguish outer DE generations from inner generations.",
+        "Instrument actual operator call sites with source/parent hashes and configuration. Deterministic offline tests prove relevant branch changes when each retained searched parameter changes; drop inactive dimensions, explain mapping.",
+        "No artificial trace entries: tests assert real implementation branch/call counts, including no-parent and before-threshold cases; fixed operator fixtures may be used only for offline tests.",
+        "Budget ledger wired into real model transport and retries before next story; checkpoint and cancellation tested; typecheck and tests pass."
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "2026-10-08 supervisor accepted. Kimi implemented real Evo operator tracing, retained search dimensions, client hooks and tests; supervisor completed transport streaming/deadline/output-limit/strict-usage enforcement, deterministic fail-closed score parsing, native before-operator control with cancel/checkpoint/resume, and truthful live-job tracking. 533 research tests; 114 Evo tests pass, 2 skip, same one pre-existing SFT missing-file failure. 50 new/direct modules typecheck clean with imported legacy diagnostics isolated; four edited legacy targets retain exactly 49 baseline error signatures, zero new. 830 tracked text files audited: zero secrets and zero research Python host-path violations. Git diff check clean. Evidence and source hashes: reports/search-integration-validation.json. Dedicated composed validation profile: k3,3 inner generations,2 candidates,1 island,step_limit12,reachable crossover,serial calls,experience enabled,prompt-memory disabled,4096 output,zero hidden retries. All five retained parameters have deterministic real branch/selection tests; dropped memory dimensions documented. No real acceptance model requests or persistent acceptance ledger created. US008 remains mandatory for actual cleanup acknowledgements and cross-job filesystem fixes before real US009."
+    },
+    {
+      "id": "US-008",
+      "title": "固定候选真实安全闭环",
+      "description": "As a researcher I need 固定候选真实安全闭环 with verifiable evidence.",
+      "acceptanceCriteria": [
+        "Run trusted synthetic fixture via new real API and containers; persist evidence of submitted/running/completed and numeric score.",
+        "Probe scoped harmless access to synthetic answer/metric paths, network egress, symlinks/path traversal, output size, timeout/cancel. No real secrets or arbitrary exploit payloads. Admission-denied case must have no execution.",
+        "Prove single worker never executes CPU/GPU jobs concurrently; timeout/cancel kill process descendants and next benign job works; scoring follows stopped execution with immutable prediction snapshot.",
+        "Record docker inspect boundary evidence and old-stack unaffected check; fail story if network/answer isolation or cleanup unproven; typecheck/tests pass."
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "2026-10-08: Real security closure on the live rsi-trustworthy stack. Cross-job scratch repair: candidate sessions now exec through deploy/rsi-trustworthy/worker/exec_trampoline.py (python3 -I -S, after the C-level uid drop): Landlock ABI>=3 (system roots read-exec, public input/data read-only, write ONLY the current job scratch root; no shared /tmp//dev/shm/scratch-parent grant; /dev/dxg + /dev/nvidia* device RW for CUDA) plus a narrow seccomp filter EPERM-ing the 18 Landlock-unmediated metadata syscalls (chmod/chown/utime/xattr families) and KILL-ing x32/foreign-arch numbers; fail closed before exec when unavailable; worker startup guard verifies trampoline+ABI. Truthful cleanup acks: worker DELETE returns 200 cleanup_verified=true only when proven (503 otherwise); dispatcher kill/cleanup consume explicit acks (404/error is NOT proof), timeout/cancel results carry worker_cleanup_verified and emit completed_at only when verified; API queued cancel uses the real Redis LREM result as execution_never_started proof and never labels running jobs never-started. Public synthetic inputs provisioned hash-verified at tasks/hello_synth/data/public (mounted ro into worker only). Evidence: reports/us008-security-loop.json (10/10 real probes PASS via gateway 6581: data-driven benign scored 0.45 with submitted/running/completed evidence; admission-denied 422 with no execution; cross-job canary read/write/chmod/utime/setxattr/symlink-alias/listdir ALL denied with content+mode intact; candidate cannot reach answers/metric/control-key/supervisor-environ, no default route; symlink+oversized submissions scoring_failed; timeout 15s kills 30s-fuse detached child (started-proven, marker never written) with worker_cleanup_verified=true; cancel confirms only via verified ack AND kills its detached child; next benign job scores), probe_gpu.py (real RTX4060Ti tensor op as uid65432/caps0 under the trampoline, score 0.55, identity+cleanup verified), probe_single_slot.py (cpu+gpu intervals disjoint), validate_stack.py VALIDATION PASSED (docker inspect boundaries, old six containers healthy incl. 6580 gateway). Offline: 593 research tests passed (incl. 25 supervisor confinement regressions test_confinement_supervisor.py and new test_exec_trampoline/test_dispatcher_cleanup_ack/test_api_cancel_proof + worker US-008 tests); mypy clean on 66 files; dispatcher/api mypy errors identical kinds to pre-change baseline (4/7); audit_secrets AUDIT OK; git diff --check clean. Included supervisor concurrent repairs (results.py input validation + test_result_input_supervisor.py, streaming=true validation profile pin, kimi-one-story.py US009 execution gate). No real model calls; no acceptance ledger; old stack untouched.\nSupervisor independent actual-candidate probe also PASS: job_ad2ab55a22414bf8 (.runtime/confinement-supervisor-real-review.json) — same-owner canary read/write/chmod/utime/setxattr/global-shm all denied, job-local HOME/TMPDIR retained, score 0.55 with source_identity_verified and worker_cleanup_verified."
+    },
+    {
+      "id": "US-009",
+      "title": "真实模型小额验收",
+      "description": "As a researcher I need 真实模型小额验收 with verifiable evidence.",
+      "acceptanceCriteria": [
+        "Only after all prior gates pass, use existing local Kimi credentials in memory on controller side (never worker/git/logs), model k3 by existing setting. One ledger for entire acceptance; 200k tokens/30 requests/90min including retries, no reset.",
+        "Run one >=3-generation/2-candidate inner Evo, then smallest supported iStratDE outer ask/evaluate/tell closed loop on same synthetic task, using retained active policy dims and real LLM+sandbox evaluations.",
+        "Actual draft/debug/improve/crossover coverage must be reported honestly; deterministic fixtures are not real evidence. If real crossover/improve absent or budget unavailable mark incomplete, checkpoint and STOP; do not increase budget.",
+        "Persist redacted request usage, operator trace, job IDs, score direction, source/policy hashes, rejection and cost evidence; all scores through isolated evaluator. No algorithm superiority claims."
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "2026-10-09: INCOMPLETE real acceptance at runner b388399. One immutable ledger:17 requests/81717 tokens/1530.2s at stop, no open reservation. cfg0 completed3 generations/6 main candidates with all four real operators; cfg1 partial; cfg2/3 zero model calls after ledger stopped. Minimum24 main requests plus7 already-incurred debug calls exceeded30, so supervisor stopped at settled usage boundary; final8 debug.7 scored jobs verified source/predictions/cleanup; one cfg0 cache hit zero incremental cost. Native tell received failure penalties for3 configs and is NOT complete outer acceptance. Last cfg1 unscored debug trace has no journal node due interruption; explicitly unverified, never cached. Evidence reports/us009-real-acceptance.{json,md}; full ignored runtime retained. No reset/resume/extra budget, no US010/default switch. Old six containers remain running; task-owned auth helper stopped."
+    },
+    {
+      "id": "US-010",
+      "title": "切换、回退与交接",
+      "description": "As a researcher I need 切换、回退与交接 with verifiable evidence.",
+      "acceptanceCriteria": [
+        "Only after prior acceptance passes, point local research client default to verified 6581; preserve old endpoint explicit rollback, no deletion/stopping of old stack.",
+        "Update AGENTS/HANDOFF/RUNBOOK to exact current mounts/commands/limitations/evidence, remove obsolete claims. Document reproducible dependency restore and startup/stop new-stack-only commands.",
+        "Run aggregate tests, mounted-source audit, budget ledger audit, secret scan, old/new health and rollback/client switching check; all must pass.",
+        "Commit locally only, no remote push. Produce concise report with evidence/commit links and pending next-stage comparisons/MetaDE work."
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "Not started: US009 real acceptance is incomplete. Preserve existing defaults and old rollback stack; no switch, deletion, server change or remote push."
+    }
+  ]
+}

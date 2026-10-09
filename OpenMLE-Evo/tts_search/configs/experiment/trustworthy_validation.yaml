@@ -1,0 +1,46 @@
+# @package _global_
+# US-007 validation profile for search-parameter/operator effectiveness
+# evidence. Inner Evo generations (search.runner.solver.num_generations) are
+# distinct from outer iStratDE generations; this config pins the INNER run:
+# >=3 inner generations, >=2 candidates per generation, step_limit>=6 (and
+# enough steps for every generation to complete), one island, a reachable
+# crossover threshold, and concurrency 1 so the evidence is deterministic and
+# every model call is budget-guarded.
+defaults:
+  - openmle_evo
+  - override /litellm: trustworthy_kimi
+  - _self_
+
+experiment_name: trustworthy_validation
+max_steps: 12
+time_budget: 2400
+model_plus_sandbox_time_budget: 3000
+candidates_per_step: 2
+n_samples_per_task: 1
+llm_concurrency: 1
+
+sandbox:
+  concurrency: 1
+  job_timeout: 600
+  wait_timeout: 900
+  poll_interval: 5
+
+search:
+  runner:
+    llm:
+      provider: openai
+    solver:
+      step_limit: 12
+      max_llm_call_retries: 1  # one attempt; managed credentials refreshed per operator
+      num_islands: 1
+      num_generations: 3
+      individuals_per_generation: 2
+      num_generations_till_crossover: 1
+      crossover_prob: 0.5
+      max_debug_depth: 1
+      max_debug_time: 600
+      execution_timeout: 600
+      experience:
+        enabled: true
+        prompt_memory:
+          enabled: false

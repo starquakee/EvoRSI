@@ -1,0 +1,250 @@
+name: rsi-trustworthy
+
+# Isolated trustworthy-RSI stack (PRD US-006). Completely separate from the
+# legacy Windows-mounted stack (6580/10150): own project name, containers,
+# networks, volumes and runtime data under .runtime/rsi-trustworthy.
+# Gateway: 127.0.0.1:6581 only.
+#
+# Trust layout:
+#   control network (internal): nginx, api, dispatcher, postgres, redis
+#   execution network (internal, isolated gateway): dispatcher, worker
+# The worker is ONLY on the execution network: it cannot reach postgres,
+# redis, the api/gateway, the evaluator tree (never mounted) or the
+# internet, and the isolated bridge removes the host gateway address.
+# Worker mounts: public job input read-only + per-job scratch only; rootfs
+# read-only with a small tmpfs /tmp. The candidate NEVER sees model,
+# control or DB credentials; SANDBOX_API_KEYS lives only in the api
+# container and the worker control key only in the dispatcher container
+# (the worker supervisor reads it once via a privilege-dropped helper).
+
+services:
+  postgres:
+    image: docker.m.daocloud.io/library/postgres:15.14
+    container_name: rsi_postgres
+    restart: unless-stopped
+    env_file:
+      - ../../.runtime/rsi-trustworthy/auth.env
+    environment:
+      POSTGRES_DB: sandbox
+      POSTGRES_USER: postgres
+    command: ["postgres", "-c", "max_connections=300"]
+    volumes:
+      - rsi_postgres_data:/var/lib/postgresql/data
+      - ../../sandbox-controller/database:/docker-entrypoint-initdb.d:ro
+    networks:
+      - control
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sandbox"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    # No published ports: reachable only on the internal control network.
+
+  redis:
+    image: docker.m.daocloud.io/library/redis:7.4.6
+    container_name: rsi_redis
+    restart: unless-stopped
+    networks:
+      - control
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    image: ghcr.io/lifeissosolong/openmle-sandbox-controller-api:1.0.0
+    container_name: rsi_api
+    restart: unless-stopped
+    command: uvicorn api_server:app --host 0.0.0.0 --port 8000 --workers 2
+    env_file:
+      - ../../.runtime/rsi-trustworthy/auth.env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      DB_HOST: postgres
+      DB_NAME: sandbox
+      DB_USER: postgres
+      STORAGE_PATH: /mnt/rsi_storage/mlsandbox
+      UPLOAD_ROOT: /mnt/rsi_storage/mlsandbox/uploads
+      ENABLE_OBS: "0"
+      ENABLE_IDEMPOTENCY: "1"
+      # Pre-execution source gate (US-004): same versioned policy engine as
+      # the Evo client choke point; admission fails closed without it.
+      PYTHONPATH: /opt/rsi_repo
+    volumes:
+      - ../../sandbox-controller/api_server:/app:ro
+      - ../../research:/opt/rsi_repo/research:ro
+      - ../../.runtime/rsi-trustworthy/storage:/mnt/rsi_storage
+    networks:
+      - control
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  dispatcher:
+    image: ghcr.io/lifeissosolong/openmle-sandbox-controller-dispatcher:1.0.0
+    container_name: rsi_dispatcher
+    restart: unless-stopped
+    env_file:
+      - ../../.runtime/rsi-trustworthy/auth.env
+    environment:
+      REDIS_HOST: redis
+      DB_HOST: postgres
+      DB_NAME: sandbox
+      DB_USER: postgres
+      STORAGE_PATH: /mnt/rsi_storage/mlsandbox
+      SANDBOX_CONFIG_FILE: /app/config/sandbox_config.json
+      ENABLE_LOCAL_JOB_SCRATCH: "1"
+      LOCAL_SCRATCH_ROOT: /mnt/local_sandbox_workdir
+      LOCAL_SCRATCH_JOB_SUBDIR: jobs-candidate-v1
+      LOCAL_SCRATCH_MIN_FREE_BYTES: "1073741824"
+      LOCAL_SCRATCH_STAGE_TIMEOUT_SECONDS: "120"
+      EXTERNAL_EVALUATOR_ENABLED: "1"
+      EVALUATOR_REGISTRY_PATH: /opt/rsi_repo/research/evaluator/registry.v1.json
+      # Worker control key (batch-2): dispatcher side of the authenticated
+      # worker control channel; the key file itself is mounted ro below.
+      RSI_WORKER_CONTROL_KEY_FILE: /run/rsi_control/key
+      PYTHONPATH: /opt/rsi_repo
+    volumes:
+      - ../../sandbox-controller/task_dispatcher:/app:ro
+      - ./config/sandbox_config.json:/app/config/sandbox_config.json:ro
+      # Trusted evaluator package + registry + answers: dispatcher only.
+      - ../../research:/opt/rsi_repo/research:ro
+      # Worker control key (batch-2): dispatcher side of the authenticated
+      # worker control channel. Never mounted into the worker's candidate
+      # environment.
+      - ../../.runtime/rsi-trustworthy/worker_control_key:/run/rsi_control/key:ro
+      - ../../.runtime/rsi-trustworthy/storage:/mnt/rsi_storage
+      - ../../.runtime/rsi-trustworthy/workdir:/mnt/local_sandbox_workdir
+    networks:
+      - control
+      - execution
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      worker:
+        condition: service_healthy
+
+  worker:
+    image: ghcr.io/lifeissosolong/openmle-sandbox-worker:1.0.0
+    container_name: rsi_worker
+    restart: unless-stopped
+    # Minimal python3 entrypoint replacing the AIO /opt/gem/run.sh (which
+    # needed seccomp=unconfined and started browser/VNC services). Runs as
+    # a ROOT SUPERVISOR with only CAP_SETUID/SETGID/KILL: it spawns every
+    # session as the dedicated non-root candidate uid (scrubbed env, no
+    # capabilities, no-new-privileges inherited container-wide) and proves
+    # cleanup with a candidate-uid process sweep before releasing its
+    # single execution slot. The worker control API requires the control
+    # key; the key file (host-owned 0600) is read once at startup through
+    # a privilege-dropped helper and is unreachable to candidate processes.
+    entrypoint: ["python3", "/opt/rsi_worker/minimal_worker.py"]
+    environment:
+      RSI_WORKER_HOST: 0.0.0.0
+      RSI_WORKER_PORT: "8080"
+      RSI_WORKER_CONTAINER: rsi-trustworthy-worker
+      RSI_WORKER_CANDIDATE_UID: "65432"
+      RSI_WORKER_CANDIDATE_GID: "65432"
+      RSI_WORKER_CONTROL_KEY_FILE: /run/rsi_control/key
+      RSI_WORKER_SCRATCH_ROOT: /mnt/local_sandbox_workdir
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ./worker/minimal_worker.py:/opt/rsi_worker/minimal_worker.py:ro
+      # Trusted pre-exec sandbox (US-008): Landlock + seccomp metadata
+      # filter applied after the uid drop, before candidate code runs.
+      - ./worker/exec_trampoline.py:/opt/rsi_worker/exec_trampoline.py:ro
+      # Worker control key (batch-2): host-owned 0600, so neither the
+      # cap-dropped container root nor the candidate uid can open it
+      # directly; the supervisor reads it via a setuid helper child.
+      - ../../.runtime/rsi-trustworthy/worker_control_key:/run/rsi_control/key:ro
+      # Public job input: read-only.
+      - ../../.runtime/rsi-trustworthy/storage/mlsandbox/jobs:/mnt/rsi_storage/mlsandbox/jobs:ro
+      - ../../.runtime/rsi-trustworthy/storage/mlsandbox/uploads:/mnt/rsi_storage/mlsandbox/uploads:ro
+      # Public synthetic task inputs (US-008): read-only. ONLY the public
+      # data directory is mounted; the private answer and trusted metric
+      # are never mounted (jobs use data_dir=/mnt/rsi_data/hello_synth).
+      - ../../tasks/hello_synth/data/public:/mnt/rsi_data/hello_synth/data/public:ro
+      # Per-job scratch: the only writable share.
+      - ../../.runtime/rsi-trustworthy/workdir:/mnt/local_sandbox_workdir
+    networks:
+      - execution
+    # No published host ports. No docker socket. Default seccomp (NOT
+    # unconfined), no-new-privileges, read-only rootfs with a small tmpfs
+    # /tmp, minimal capabilities (SETUID/SETGID/KILL for the supervisor
+    # only; candidate processes run capability-less under nnp), bounded
+    # resources.
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+      - KILL
+    pids_limit: 128
+    mem_limit: 4g
+    cpus: 2.0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: ["gpu"]
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=5)"
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 10s
+
+  nginx:
+    image: docker.m.daocloud.io/library/nginx:1.25.5
+    container_name: rsi_nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx-main.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "127.0.0.1:6581:80"
+    networks:
+      # edge: this Docker Desktop engine creates NO host listener for ports
+      # published on containers attached only to internal networks (verified
+      # 2026-10-08 with a probe container), so the gateway additionally sits
+      # on a non-internal network. All other services stay on internal-only
+      # networks; the worker never touches edge/control.
+      - control
+      - edge
+    depends_on:
+      - api
+
+networks:
+  control:
+    driver: bridge
+    internal: true
+  execution:
+    driver: bridge
+    internal: true
+    driver_opts:
+      # Batch-2 repair: internal alone still leaves a host bridge gateway
+      # address (Docker's documented contract); isolated removes it, so
+      # the worker has no host-side gateway to probe. Verified on this
+      # engine (28.2.2) with the same worker image.
+      com.docker.network.bridge.gateway_mode_ipv4: isolated
+  edge:
+    driver: bridge
+
+volumes:
+  rsi_postgres_data:

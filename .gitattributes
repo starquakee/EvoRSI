@@ -1,0 +1,12 @@
+# Vendored upstream snapshots are preserved byte-for-byte (provenance is
+# hash-verified by research/tools/inventory.py --manifest). Upstream ships
+# CRLF docs and some trailing whitespace; do not let `git diff --check`
+# rewrite or fail on them. First-party code keeps default whitespace checks.
+research/vendor/** whitespace=cr-at-eol,-blank-at-eol,-blank-at-eof,-space-before-tab
+# US-005 evaluator fixture is a byte-identical copy of the legacy synthetic
+# hello_synth answer (CRLF); its sha256 is pinned in registry.v1.json, so
+# line endings must not be rewritten or flagged.
+research/evaluator/tasks/** whitespace=cr-at-eol,-blank-at-eol,-blank-at-eof,-space-before-tab -text
+
+# Byte-identical public synthetic fixture copies, pinned in their README.
+tasks/hello_synth/data/public/*.csv whitespace=cr-at-eol -text

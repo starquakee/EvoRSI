@@ -1,0 +1,148 @@
+{
+  "generated_at": "2026-10-08T13:41:43.615933+00:00",
+  "generator": "research/tools/inventory.py --manifest",
+  "repo_root": "<repo-root>",
+  "components": [
+    {
+      "name": "research/adapters",
+      "origin_tree": "rsi-gpu-legacy",
+      "files": [
+        {
+          "origin_path": "<legacy-root>/rsi_eval_adapter.py",
+          "repo_path": "research/adapters/rsi_eval_adapter.py",
+          "origin_sha256": "ebf16b2f0d28a67aa8b289c80175412bcd96932b31b69da564c8527b37196669",
+          "repo_sha256": "e27ded8892c03f8da760993afb4e84c89688364d2c416211a488e994c5cd31cf",
+          "identical": false,
+          "note": "import rewritten package-relative; gate logic unchanged"
+        },
+        {
+          "origin_path": "<legacy-root>/safe_rsi_de_adapter.py",
+          "repo_path": "research/adapters/safe_rsi_de_adapter.py",
+          "origin_sha256": "8a6a421152d7ae74337d0efda7f4e6ce80a9a85749ec22b445cab7ce3fe46985",
+          "repo_sha256": "02338ebc9c8debc468b41864ee4935648af1d95ef99621253e2a5ae042695bbd",
+          "identical": false,
+          "note": "docstring provenance note; __main__ prints real newline"
+        },
+        {
+          "origin_path": "<legacy-root>/sandbox_eval_client.py",
+          "repo_path": "research/adapters/sandbox_eval_client.py",
+          "origin_sha256": "fc2e994b51ae0071cc49e17d5db460e2ab3ab49dc1d2394417ef22b0497ce6c7",
+          "repo_sha256": "fa23a3d576cdaac8f3e42bf64b7a0846790130d1e33359c717190db73d339a7e",
+          "identical": false,
+          "note": "US-004 unified source gate; US-007 cancellation registry, cleanup proof and bounded polling"
+        }
+      ]
+    },
+    {
+      "name": "research/experiments",
+      "origin_tree": "rsi-gpu-legacy",
+      "files": [
+        {
+          "origin_path": "<legacy-root>/e2e/de_formal_baseline.py",
+          "repo_path": "research/experiments/de_formal_baseline.py",
+          "origin_sha256": "d9749985bcb8cbaee85080cb3eec278e4d7f184464b5c58779c982f7a0013191",
+          "repo_sha256": "e180877824bf5796ab282be8e767219eed16fa68dd2868492cd3a3b134a2bb7a",
+          "identical": false,
+          "note": "credentials env-only (key-scraping fallback removed); repo-relative paths"
+        },
+        {
+          "origin_path": "<legacy-root>/e2e/de_search_hello.py",
+          "repo_path": "research/experiments/de_search_hello.py",
+          "origin_sha256": "39c41cf2ba63a84742a09c12488fa64c69c347b4de70ab0fb370b81ced538aad",
+          "repo_sha256": "1a168b422d390cbb226636ee08bb429ab49af7a70db6ac954c1f1ab12365a2f5",
+          "identical": false,
+          "note": "repo-relative import resolution"
+        },
+        {
+          "origin_path": "<legacy-root>/e2e/hello_synth_job.py",
+          "repo_path": "research/experiments/hello_synth_job.py",
+          "origin_sha256": "43f8a49f7747e88db6553987267088302e514151d96433820765860efd5337a9",
+          "repo_sha256": "43f8a49f7747e88db6553987267088302e514151d96433820765860efd5337a9",
+          "identical": true
+        },
+        {
+          "origin_path": "<legacy-root>/run_istratde_gpu.py",
+          "repo_path": "research/experiments/run_istratde_gpu.py",
+          "origin_sha256": "c64419f7f7f0819608c6793701cf15db2398482ec1ab2f31f73ebdf13d6ce8ad",
+          "repo_sha256": "c64419f7f7f0819608c6793701cf15db2398482ec1ab2f31f73ebdf13d6ce8ad",
+          "identical": true
+        },
+        {
+          "origin_path": "<legacy-root>/run_metade_gpu.py",
+          "repo_path": "research/experiments/run_metade_gpu.py",
+          "origin_sha256": "d56db654d8be51288943582285b91b7e71da5c2a175e1e9e1daee971c6c3ba57",
+          "repo_sha256": "d56db654d8be51288943582285b91b7e71da5c2a175e1e9e1daee971c6c3ba57",
+          "identical": true
+        },
+        {
+          "origin_path": "<legacy-root>/e2e/test_adapter.py",
+          "repo_path": "research/experiments/smoke_adapter.py",
+          "origin_sha256": "0af869383004c692d51e8c9996b37a38b7dba9890de4c3512162d282b814212e",
+          "repo_sha256": "32598049b8e17a3e4da400abfc12955b6aab5e01e0fc445b326c5cc20765d247",
+          "identical": false,
+          "note": "renamed from e2e/test_adapter.py; repo-relative imports"
+        },
+        {
+          "origin_path": "<legacy-root>/e2e/submit_e2e.py",
+          "repo_path": "research/experiments/submit_e2e.py",
+          "origin_sha256": "9b4b2bccb0944a322d90b44ae07165de6d340ff0fdb6ded1a3ec913386e9c73e",
+          "repo_sha256": "9b4b2bccb0944a322d90b44ae07165de6d340ff0fdb6ded1a3ec913386e9c73e",
+          "identical": true
+        }
+      ]
+    },
+    {
+      "name": "research/vendor/istratde",
+      "origin_tree": "rsi-gpu-legacy",
+      "origin_path": "<legacy-root>/istratde",
+      "license": "GPL-3.0 (LICENSE preserved)",
+      "vcs": {
+        "url": "https://github.com/EMI-Group/istratde.git",
+        "commit": "49c9d662774b0f43a1d6dbc9cb8547ba22ea448a",
+        "dirty": false
+      },
+      "copied": [
+        "src/",
+        "pyproject.toml",
+        "LICENSE",
+        "README.md"
+      ],
+      "comparison": {
+        "file_count": 107,
+        "mismatches": [],
+        "missing_in_repo": [],
+        "extra_in_repo": [],
+        "identical": true
+      }
+    },
+    {
+      "name": "research/vendor/metade",
+      "origin_tree": "rsi-gpu-legacy",
+      "origin_path": "<legacy-root>/metade",
+      "license": "GPL-3.0 (LICENSE preserved)",
+      "vcs": {
+        "url": "https://github.com/EMI-Group/metade.git",
+        "commit": "bf11ce51495948eb0d64e5d7de141b558ea797c5",
+        "dirty": false
+      },
+      "copied": [
+        "src/",
+        "pyproject.toml",
+        "LICENSE",
+        "README.md"
+      ],
+      "comparison": {
+        "file_count": 108,
+        "mismatches": [],
+        "missing_in_repo": [],
+        "extra_in_repo": [],
+        "identical": true
+      }
+    }
+  ],
+  "environment_snapshots": [
+    "research/provenance/venv-rsi-gpu.freeze.txt",
+    "research/provenance/venv-openmle-evo.freeze.txt",
+    "research/provenance/venv-research.freeze.txt"
+  ]
+}

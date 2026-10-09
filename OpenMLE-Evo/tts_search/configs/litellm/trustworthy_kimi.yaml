@@ -1,0 +1,16 @@
+# Credential-free profile. The controller supplies managed OAuth in memory.
+_target_: litellm.Router
+_convert_: all
+model_list:
+  - model_name: k3
+    litellm_params:
+      model: openai/k3
+      api_key: runtime
+      base_url: https://api.kimi.com/coding/v1
+      temperature: 1.0
+      top_p: 0.95
+      max_tokens: 4096
+      timeout: 600
+      num_retries: 0
+      max_retries: 0
+      stream: true

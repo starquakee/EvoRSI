@@ -1,0 +1,156 @@
+# Skill: dogs-vs-cats-redux-kernels-edition
+
+## 1. Task-Specific Reading
+- Predict whether each RGB photograph is a dog or a cat. This is binary natural-image classification, not detection, segmentation, retrieval, multilabel tagging, or fine-grained breed classification.
+- The target is a probability that the image is a dog: dog = 1, cat = 0. Labels are available from training filenames; test images require one probability per image.
+- The metric is binary log loss. Optimize calibrated probability quality, not accuracy, F1, AUC, or a hard 0.5 threshold. Overconfident wrong predictions are punished heavily.
+- Training size is moderate: 25,000 labeled images and 12,500 test images. This is enough to fine-tune strong pretrained backbones, but small enough that fold averaging, calibration, and regularization still matter.
+- The visual distinction is coarse compared with breed or medical tasks. The main image signal is whole-animal shape, face, fur/coat texture, pose, and common context. Very high resolution can help with face/texture detail, but this task should not need localization-first architecture.
+- No metadata, groups, bounding boxes, masks, temporal context, text, or tabular side channels are described. Treat the image as the only legitimate modeling signal.
+- Natural photo orientation matters statistically. Horizontal flips are safe. Vertical flips and 90-degree rotations preserve class identity in a literal sense but create unnatural photos; use them only if validation log loss improves.
+- Dominant score levers:
+  - Strong ImageNet/IN22k-pretrained image backbones fine-tuned end to end.
+  - Binary-log-loss-aligned training and calibrated probabilities.
+  - Stratified OOF validation scored by log loss.
+  - Fold averaging, light TTA, and a small diverse architecture/seed ensemble.
+  - Image size and augmentation tuning that improves probability calibration without damaging animal evidence.
+  - Optional pseudo-labeling from a high-confidence fold ensemble, used late and conservatively.
+
+## 2. Highest-Expected-Score Strategy
+- Converge toward a calibrated, fold-averaged, small diverse ensemble:
+  - Train 4-5 stratified folds for each selected model family.
+  - Use pretrained `timm` backbones with a single binary logit and `BCEWithLogitsLoss`.
+  - Save OOF logits/probabilities for every fold, architecture, seed, and TTA setting.
+  - Select checkpoints and compare experiments by aggregate OOF binary log loss.
+  - Calibrate logits on OOF/validation data when it lowers log loss.
+  - Average calibrated probabilities across folds, TTA views, seeds, and architectures for final inference.
+- Primary model families:
+  - Strong practical first tier: `tf_efficientnetv2_s.in21k_ft_in1k`, `convnextv2_base.fcmae_ft_in22k_in1k`, `convnextv2_small.fcmae_ft_in22k_in1k`, and `eva02_base_patch14_448.mim_in22k_ft_in22k_in1k` if it fits the training budget.
+  - Efficient fold workhorses: `convnextv2_tiny.fcmae_ft_in22k_in1k`, `eva02_small_patch14_336.mim_in22k_ft_in1k`, or EfficientNet-B0/B1-style pretrained models for fast OOF experiments.
+  - Final diversity: blend one CNN/ConvNeXt/EfficientNet component with one ViT/EVA-style component. Add DINO-style frozen features only if available through local libraries and OOF errors are meaningfully different.
+- Resolution:
+  - Use 384 px as the default serious operating point for EfficientNetV2/ConvNeXt-style models. It captures enough animal detail while fitting 5-fold training comfortably on one 24 GB GPU.
+  - Use 336-448 px for EVA/ViT-style models depending on memory. Larger is not automatically better because the label is coarse and train images vary in quality.
+  - Test 224/256 only for fast ablations or pseudo-label teachers; use 384/448 for the medal-oriented final blend if OOF log loss supports it.
+  - Progressive resizing can help heavier models: warm up at 224/256 or 336, then fine-tune at 384/448 with a lower LR.
+- Loss and calibration:
+  - Use `BCEWithLogitsLoss` on one dog logit. This directly matches binary log loss after sigmoid.
+  - Start with no label smoothing. Label smoothing and strong MixUp can reduce overconfidence but can also make confident correct predictions too flat. Treat them as validation-tuned regularizers, not defaults.
+  - Fit a scalar temperature on OOF/validation logits when validation log loss shows overconfidence. Use the same temperature handling for test logits from that model family.
+  - Clip final probabilities only with a tiny epsilon for numeric safety; do not aggressively compress predictions toward 0.5.
+- Augmentation:
+  - Use label-preserving, natural-photo augmentations: random resized crop with high retained scale, horizontal flip, mild shift/scale/rotate, brightness/contrast, modest color jitter, light blur/noise.
+  - Keep animal identity visible. Aggressive crops, large random erasing, heavy CutMix, or severe distortions can turn probability calibration worse even if accuracy looks stable.
+  - For large pretrained ViTs/EVA, use lighter augmentation than for smaller CNNs.
+- Medal-oriented endpoint:
+  - A strong final solution should be a 5-fold calibrated ConvNeXtV2/EfficientNetV2 model at 384 px plus one complementary EVA/ViT or second CNN architecture, with horizontal-flip TTA and OOF-optimized blend weights.
+  - Keep the ensemble compact and OOF-justified. For this simple binary task, a few well-calibrated components usually beat many loosely tuned models.
+
+## 3. Strong First Implementation Plan
+- Build the first complete solution as a serious PyTorch/timm fine-tuning pipeline:
+  - Backbone: start with `tf_efficientnetv2_s.in21k_ft_in1k` at 384 px or `convnextv2_small.fcmae_ft_in22k_in1k` at 384 px. If using a heavier first model and the script remains feasible, use `convnextv2_base.fcmae_ft_in22k_in1k` at 384 px.
+  - Head: one binary logit. A simple linear head is enough; for CNN feature maps, GeM or adaptive pooling plus modest dropout can help. For ViT/EVA models, use the backbone's proper pooled representation.
+  - Target/loss: float dog label in `{0, 1}` with `BCEWithLogitsLoss`.
+  - Folds: 5-fold `StratifiedKFold` on the binary label. If time is tight for a heavy backbone, use 4 folds for the first pass and upgrade to 5 folds before finalizing.
+  - Selection: checkpoint by validation binary log loss. Track accuracy/AUC only as diagnostics.
+- Preprocessing:
+  - Load RGB, resize/crop to the chosen input size, and normalize with ImageNet mean/std for pretrained weights.
+  - Prefer random resized crop during training with scale around 0.75-1.0 or 0.8-1.0. Do not use very low scale floors that often remove the animal.
+  - Use deterministic resize plus center crop or direct resize for validation/inference. Keep validation preprocessing identical across experiments.
+- First training augmentation:
+  - Horizontal flip with probability 0.5.
+  - Mild rotation and shift/scale, with small enough limits to preserve natural framing.
+  - Mild brightness/contrast and hue/saturation changes; cats and dogs vary in lighting and coat color, but excessive color distortion can harm calibration.
+  - Low-probability blur/noise to handle image quality variation.
+  - Optional MixUp with small alpha around 0.1-0.2 and moderate probability only if log loss improves. Delay CutMix.
+- Training behavior:
+  - Use AdamW, discriminative learning rates, cosine schedule with warmup, mixed precision, gradient clipping, and effective batch size around 32-64 through accumulation when needed.
+  - Use a short head-only warmup only if full fine-tuning is unstable. Otherwise unfreeze early with a small backbone LR and a higher head LR.
+  - Use dropout around 0.1-0.3 and weight decay around the standard pretrained fine-tuning range. Avoid heavy regularization until OOF curves show overfit.
+  - Use EMA if simple to integrate and validate with EMA weights by log loss.
+- First inference:
+  - For each fold, predict validation/test logits and convert with sigmoid.
+  - Add identity + horizontal flip TTA as the default. Average TTA probabilities within each fold.
+  - Average fold probabilities. Apply temperature scaling if it improves OOF log loss.
+  - Submit continuous dog probabilities. Never threshold or round.
+
+## 4. High-ROI Upgrades Across Rounds
+- Round 2:
+  - Move to full 5-fold training if the first run used fewer folds. Fold averaging is one of the safest log-loss gains.
+  - Compare 320/336, 384, and 448 px on the same validation folds for the chosen backbone. Keep the size with best aggregate OOF log loss, not just best accuracy.
+  - Tune calibration-sensitive regularization: no MixUp vs. small-alpha MixUp, dropout 0.1-0.3, drop path 0.0-0.2, and no label smoothing vs. very small smoothing only if using a two-class CE formulation.
+  - Add OOF temperature scaling. A single scalar per model family is usually enough; reject it if it makes OOF log loss worse.
+  - Strengthen TTA from identity + horizontal flip to a small set of center/scale crops only if OOF validation with mirrored transforms suggests improved log loss. Do not add vertical/rotation TTA by habit.
+- Round 3:
+  - Add one complementary backbone. If the first model is EfficientNet/ConvNeXt, add EVA-small/base or another ViT-style model. If the first model is EVA/ViT, add ConvNeXtV2 or EfficientNetV2.
+  - Build an OOF blend using simple nonnegative weights optimized for binary log loss. Calibrate each component before weight search when calibration differs.
+  - Add a second seed for the best backbone if training variance is visible across folds. Multi-seed averaging is often lower risk than adding a poorly validated large model.
+  - Try progressive resizing for the strongest model: low/medium resolution warmup followed by final 384/448 fine-tuning at lower LR.
+  - Try light checkpoint averaging, EMA, or SWA only when validation log loss improves and probabilities do not become underconfident.
+- Late round:
+  - Train one high-ceiling model such as `eva02_base_patch14_448.mim_in22k_ft_in22k_in1k` or `convnextv2_base.fcmae_ft_in22k_in1k` as a final blend component if compute remains.
+  - Pseudo-label only after a stable calibrated fold ensemble exists. Select only very confident test images near 0 or 1, use soft labels or low-weight hard labels, and preserve the original validation folds for honest OOF comparison.
+  - Test probability-space vs. logit-space averaging. Use probability averaging across heterogeneous architectures; logit averaging can work within same-family folds with similar calibration.
+  - Inspect OOF errors by confidence bucket to identify overconfidence, underconfidence, or augmentation damage. Use this to adjust calibration/augmentation, not to manually relabel.
+
+## 5. Validation and Metric Optimization
+- Use deterministic `StratifiedKFold` over the binary dog/cat labels. The task description gives no group key; do not invent groups from filenames or image IDs.
+- The primary validation score is aggregate OOF binary log loss across all training images:
+  - Compute log loss from sigmoid probabilities.
+  - Compare experiments on the same folds.
+  - Prefer changes that improve aggregate OOF and are not driven by one anomalous fold.
+- Metric alignment:
+  - Binary log loss rewards calibrated probabilities. A model with slightly worse accuracy can be better if it avoids extreme wrong probabilities.
+  - Do not tune or use a classification threshold for submission.
+  - Do not select checkpoints by accuracy alone. Loss-based checkpointing is usually more aligned; AUC is useful only as a separation diagnostic.
+  - Use tiny clipping such as `eps` to avoid exact 0/1 numerical issues, but avoid broad clipping that flattens confident correct predictions.
+- Calibration:
+  - Fine-tuned deep nets on an easy binary task can be overconfident. Temperature scaling on OOF/validation logits is high ROI.
+  - Fit temperature by minimizing validation/OOF log loss, not by leaderboard feedback.
+  - Use separate temperatures per architecture/family if their calibration differs. Then blend calibrated probabilities.
+  - Avoid strong label smoothing as a first move; it may reduce overconfidence but can hurt log loss by making easy examples too uncertain.
+- OOF usage:
+  - Store OOF logits/probabilities for each fold, model, seed, TTA policy, and calibration setting.
+  - Use OOF log loss to choose image size, augmentations, regularization, calibration, blend weights, and pseudo-label cutoffs.
+  - When public leaderboard and OOF disagree, trust stable OOF first unless there is evidence of preprocessing mismatch or accidental leakage. Public feedback for a simple task can be noisy once scores are close.
+
+## 6. Model, Feature, and Preprocessing Priorities
+- Output and loss:
+  - Use one dog logit with `BCEWithLogitsLoss`.
+  - Convert to sigmoid probabilities for OOF/test.
+  - Keep final probabilities continuous and calibrated.
+- Backbones:
+  - First strong run: EfficientNetV2-S or ConvNeXtV2 Small/Base at 384 px.
+  - Strong final CNN component: ConvNeXtV2 Base or EfficientNetV2-S/B-style pretrained model.
+  - Strong final transformer component: EVA-02 Small/Base at 336-448 px if it validates well.
+  - Fast ablation component: ConvNeXtV2 Tiny, EVA-02 Small, or EfficientNet-B0/B1-style pretrained model.
+- Resolution:
+  - Start serious training at 384 px.
+  - Use 336 for faster EVA-small/ViT experiments and 448 for final EVA/base or high-ceiling models when memory allows.
+  - Avoid 512+ as a default; validate it because the task is coarse and overconfident memorization can hurt log loss.
+- Augmentation:
+  - Highest value: horizontal flip, high-retention random resized crop, mild affine/rotation, brightness/contrast, modest HSV jitter.
+  - Medium value: light blur/noise, small-alpha MixUp, EMA, model checkpoint averaging.
+  - Risky: heavy CutMix, large CoarseDropout/RandomErasing, very aggressive crops, vertical/90-degree rotation TTA.
+- Pooling/head:
+  - CNNs: GeM or adaptive pooling with a small dropout head is a reasonable upgrade.
+  - ViTs/EVA: use the correct pooled token output; do not apply CNN pooling to token sequences.
+  - Keep the classifier head simple. The data volume and binary target do not justify a large custom head.
+- Inference priority:
+  - Fold averaging first.
+  - Horizontal-flip TTA second.
+  - Temperature scaling third.
+  - One complementary architecture or second seed fourth.
+  - Pseudo-labeling only after the above are stable.
+
+## 7. Avoid or Delay
+- Avoid object detection, segmentation, cropping by saliency, keypoint models, breed classifiers, or localization-first pipelines as the main route. The competition asks for image-level cat-vs-dog probability.
+- Avoid external datasets, private labels, manual relabeling, internet-sourced images, or assumptions beyond the provided train/test images.
+- Avoid training from scratch as the main plan. A scratch CNN is unlikely to beat modern transfer learning under the budget and should only be a late diversity experiment if at all.
+- Avoid optimizing accuracy, F1, hard labels, or thresholded outputs. The metric is log loss.
+- Avoid selecting models by public leaderboard noise when OOF log loss is consistent.
+- Avoid aggressive label smoothing, excessive MixUp/CutMix, or broad probability clipping that makes the model underconfident on easy images.
+- Avoid vertical flips, 90-degree rotations, and heavy perspective distortions until a stable baseline proves they help OOF log loss. Natural cat/dog photos are usually upright.
+- Avoid huge ensembles before a calibrated 5-fold single-backbone baseline exists. The high-value sequence is strong folds, calibration, TTA, then one or two diverse components.
+- Delay pseudo-labeling until the final ensemble is confident. Mid-probability pseudo-labels near 0.5 are exactly where binary log loss is most vulnerable to noisy self-training.
+- Avoid task-family contamination: no metadata fusion, ordinal losses, multilabel thresholds, AUC-only rank optimization, restoration losses, tiling, or medical/group leakage rules unless the actual data unexpectedly adds those fields.

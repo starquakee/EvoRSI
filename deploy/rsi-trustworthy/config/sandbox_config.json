@@ -1,0 +1,4 @@
+{
+  "gpu": {"endpoints": ["http://worker:8080"]},
+  "cpu": {"endpoints": ["http://worker:8080"]}
+}
