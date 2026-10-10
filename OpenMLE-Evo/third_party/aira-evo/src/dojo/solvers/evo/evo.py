@@ -788,6 +788,17 @@ class Evolutionary(Solver):
         self._rich_summary_locks: dict[str, threading.Lock] = {}
         self._rich_summary_locks_guard = threading.Lock()
         self.operator_tracer = None  # Optional[Callable[[Dict[str, Any]], None]]
+        # Optional acceptance hook: (operator, completion_text, extracted_code,
+        # metrics) -> None, invoked per provider attempt BEFORE the operator
+        # trace/evaluation so generated source + outcome survive an interrupt.
+        self.generation_outcome_sink = None
+        # Concise failure classification of the last generation (None when the
+        # extraction succeeded); forwarded to step_task for precise feedback.
+        self.last_generation_feedback = None
+        # Optional acceptance budget floor (MainBudgetControl): reserves
+        # current+future MAIN requests and may skip optional debug. Ordinary
+        # Evo semantics are unchanged when it is not installed.
+        self.budget_control = None
         self._current_generation_id = 0
         self.before_operator = None
 
@@ -1030,6 +1041,35 @@ class Evolutionary(Solver):
         for memory_node in deduped_memory_nodes:
             self._ensure_node_rich_summary(memory_node)
 
+    def _require_main_budget(self, operator: str) -> None:
+        """Floor check before a MAIN operator call (acceptance only).
+
+        No-op unless ``self.budget_control`` was installed by the caller;
+        control exceptions propagate (the run stops with the machine-readable
+        budget reason before any provider reservation).
+        """
+        control = getattr(self, "budget_control", None)
+        if control is not None:
+            control.require_main(operator)
+
+    def _generation_outcome_observer(self, operator: str):
+        """Per-attempt generation-outcome observer bound to one operator.
+
+        No-op (None) unless ``self.generation_outcome_sink`` was installed by
+        the caller. The sink runs BEFORE the operator trace and any candidate
+        evaluation, so generated source bytes and the precise generation
+        outcome are already persisted if the run is interrupted afterwards.
+        Sink exceptions propagate: broken evidence must fail the run.
+        """
+        sink = getattr(self, "generation_outcome_sink", None)
+        if sink is None:
+            return None
+
+        def observe(completion_text, extracted_code, metrics):
+            sink(operator, completion_text, extracted_code, metrics)
+
+        return observe
+
     def _emit_operator_trace(self, operator: str, child_node: Node, parent_nodes: list) -> None:
         """Emit one operator-trace event for a freshly created node.
 
@@ -1079,6 +1119,7 @@ class Evolutionary(Solver):
         control = getattr(self, "before_operator", None)
         if control is not None:
             control()
+        self._require_main_budget("draft")
         plan, code, metrics = execute_op_plan_code(
             self.draft_fn,
             self.task_desc,
@@ -1089,6 +1130,7 @@ class Evolutionary(Solver):
             get_complextiy_level(self.root_node) if self.cfg.use_complexity else None,
             self.root_node,
             max_operator_tries=self.cfg.max_llm_call_retries,
+            outcome_observer=self._generation_outcome_observer("draft"),
         )
         node = Node(
             plan=plan, code=code, parents=[self.root_node], operators_used=["draft"], operators_metrics=[metrics]
@@ -1114,6 +1156,7 @@ class Evolutionary(Solver):
         control = getattr(self, "before_operator", None)
         if control is not None:
             control()
+        self._require_main_budget("improve")
         self._prepare_operator_rich_memory("improve", [parent_node])
         plan, code, metrics = execute_op_plan_code(
             self.improve_fn,
@@ -1125,6 +1168,7 @@ class Evolutionary(Solver):
             get_complextiy_level(parent_node) if self.cfg.use_complexity else None,
             self.data_preview,
             max_operator_tries=self.cfg.max_llm_call_retries,
+            outcome_observer=self._generation_outcome_observer("improve"),
         )
         node = Node(
             plan=plan, code=code, parents=[parent_node], operators_used=["improve"], operators_metrics=[metrics]
@@ -1160,6 +1204,7 @@ class Evolutionary(Solver):
             self.cfg.time_limit_secs - self.state.running_time,
             self.data_preview,
             max_operator_tries=self.cfg.max_llm_call_retries,
+            outcome_observer=self._generation_outcome_observer("debug"),
         )
         node = Node(plan=plan, code=code, parents=[parent_node], operators_used=["debug"], operators_metrics=[metrics])
         self.logger.info(f"Debug Node Created - Metrics: {metrics}")
@@ -1190,6 +1235,7 @@ class Evolutionary(Solver):
         control = getattr(self, "before_operator", None)
         if control is not None:
             control()
+        self._require_main_budget("crossover")
         self._prepare_operator_rich_memory("crossover", [parent_node1, parent_node2])
         plan, code, metrics = execute_op_plan_code(
             self.crossover_fn,
@@ -1201,6 +1247,7 @@ class Evolutionary(Solver):
             self.cfg.time_limit_secs - self.state.running_time,
             self.data_preview,
             max_operator_tries=self.cfg.max_llm_call_retries,
+            outcome_observer=self._generation_outcome_observer("crossover"),
         )
         node = Node(
             plan=plan,
@@ -1330,12 +1377,30 @@ class Evolutionary(Solver):
 
         # We run the debug cycle for a number of times
         # or until time runs out, whichever comes first
+        budget_control = getattr(self, "budget_control", None)
+        if budget_control is not None:
+            denial = budget_control.debug_denial_reason()
+            if denial is not None:
+                budget_control.record_debug_skipped(denial)
+                self.logger.info(
+                    f"Optional debug skipped by acceptance budget control: {denial}",
+                    LogEvent.SOLVER,
+                )
+                return state, debug_path, None
+
         for _ in range(debug_depth):
             # Create the debugged node
             fixed_node_attempt = self._debug(current_debug_node)
             # Evaluate the attempt
             try:
-                state, eval_result = task.step_task(state, extract_code(fixed_node_attempt.code))
+                generation_feedback = getattr(self, "last_generation_feedback", None)
+                if generation_feedback is not None:
+                    state, eval_result = task.step_task(
+                        state, extract_code(fixed_node_attempt.code),
+                        generation_feedback=generation_feedback,
+                    )
+                else:
+                    state, eval_result = task.step_task(state, extract_code(fixed_node_attempt.code))
                 self.parse_eval_result(node=fixed_node_attempt, eval_result=eval_result)
                 if self._experience_enabled():
                     self._append_evaluated_node(fixed_node_attempt)
@@ -2058,7 +2123,14 @@ class Evolutionary(Solver):
                 child_node = create_node_fn(*in_context_nodes)
                 if generation_id > 0 and solution_database.last_parent_selection is not None:
                     child_node.experience_parent_selection = solution_database.last_parent_selection
-                state, eval_result = task.step_task(state, extract_code(child_node.code))
+                generation_feedback = getattr(self, "last_generation_feedback", None)
+                if generation_feedback is not None:
+                    state, eval_result = task.step_task(
+                        state, extract_code(child_node.code),
+                        generation_feedback=generation_feedback,
+                    )
+                else:
+                    state, eval_result = task.step_task(state, extract_code(child_node.code))
                 self.parse_eval_result(child_node, eval_result)
                 # if the node is buggy, we run a debug cycle
                 # and add the fixed node to the generation

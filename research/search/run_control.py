@@ -9,6 +9,20 @@ from research.contracts.budget import BudgetError, BudgetLedger, CancellationTok
 from research.contracts.persist import atomic_write_json
 from research.search.budget_transport import TransportGuardConfig, install_budget_guard
 
+_CONTROLLED_REASON_LIMIT = 200
+
+
+def controlled_termination_reason(exc: BaseException) -> str:
+    """Bounded machine-readable reason for OUR controlled stop/budget
+    exceptions (Cancelled/BudgetError/LedgerStopped carry only our own
+    curated strings). Anything else keeps just the type name, so provider
+    internals or credential-bearing text never enter checkpoints/results."""
+    name = type(exc).__name__
+    if isinstance(exc, (Cancelled, BudgetError, LedgerStopped)):
+        detail = str(exc).splitlines()[0][: _CONTROLLED_REASON_LIMIT] if str(exc) else ""
+        return f"{name}:{detail}" if detail else name
+    return name
+
 
 def run_guarded_search(
     solver: Any, task: Any, state: Any, *, ledger: BudgetLedger,
@@ -16,12 +30,17 @@ def run_guarded_search(
     cancel_live_jobs: Callable[[], list[dict[str, Any]]],
     checkpoint_path: Path,
     prepare_operator: Callable[[], None] | None = None,
+    cooperative_stop: Callable[[], str | None] | None = None,
 ) -> Any:
     """Use the real solver, real operator clients, and real transport guards.
 
     The checkpoint contains only accounting/cancellation state. The solver's
     own journal stays in its configured ignored run directory. Caller must
     supply the shared ledger; this function never creates or resets one.
+
+    ``cooperative_stop`` (optional) is queried at the before-operator safe
+    boundary; returning a reason stops the search cooperatively (Cancelled)
+    with the usual cleanup + checkpoint, never a signal-time gap.
     """
     if getattr(solver, 'before_operator', None) is not None:
         raise BudgetError('search_control_already_installed')
@@ -47,6 +66,10 @@ def run_guarded_search(
             raise Cancelled('deadline_exceeded')
         if getattr(task, 'stop_requested', False):
             raise Cancelled('task_stop_requested')
+        if cooperative_stop is not None:
+            stop_reason = cooperative_stop()
+            if stop_reason is not None:
+                raise Cancelled(f'cooperative_stop:{stop_reason}')
         if solver.state.current_step >= solver.cfg.step_limit:
             raise Cancelled('solver_step_limit')
         # SDK debug logging can include request options. Auth is runtime-only
@@ -64,7 +87,7 @@ def run_guarded_search(
         before_operator()
         return solver.search(task, state)
     except BaseException as exc:
-        termination = type(exc).__name__
+        termination = controlled_termination_reason(exc)
         token.stop('search_stopped:' + termination)
         ledger.stop('search_stopped:' + termination)
         raise

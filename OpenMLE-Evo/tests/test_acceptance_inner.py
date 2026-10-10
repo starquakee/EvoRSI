@@ -134,7 +134,8 @@ def test_build_solver_real_assembly_matches_pins_and_decoded():
         assert llm.client.api_key == ac.API_KEY_PLACEHOLDER
         operator_cfg = cfg.operators[name]
         assert operator_cfg.llm.generation_kwargs["stream"] is True
-        assert operator_cfg.llm.generation_kwargs["max_tokens"] == 4096
+        assert operator_cfg.llm.generation_kwargs["max_tokens"] == 8192
+        assert operator_cfg.llm.generation_kwargs["reasoning_effort"] == "low"
         assert operator_cfg.system_message_prompt_template.template.strip()
     clients = operator_clients(solver)
     assert len(clients) == 5
@@ -403,11 +404,13 @@ def test_run_inner_repeatable_branch_selection_and_full_evidence(tmp_path, monke
     assert {r["operator"] for r in records} <= {"draft", "improve", "debug", "crossover"}
     for record in records:
         assert set(record["request"]) <= {
-            "model", "max_tokens", "stream", "temperature", "top_p",
+            "model", "max_tokens", "max_completion_tokens", "stream",
+            "temperature", "top_p", "reasoning_effort", "allowed_openai_params",
             "request_timeout", "stream_options", "num_retries", "max_retries",
         }
         assert record["request"]["stream"] is True
-        assert record["request"]["max_tokens"] == 4096
+        assert record["request"]["max_tokens"] == 8192
+        assert record["request"]["reasoning_effort"] == "low"
         assert "api_key" not in json.dumps(record)
     # Live-jobs registry persisted and fully reconciled at the end.
     live = json.loads((run_dir_a / "live-jobs.json").read_text())

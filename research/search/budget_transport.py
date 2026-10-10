@@ -27,6 +27,12 @@ class TransportGuardConfig:
     # every provider attempt to its ledger reservation. Never fed secrets:
     # callers must redact credential fields from model_kwargs first.
     attempt_sink: Any = None
+    # Optional exact request-parameter pins (e.g. the acceptance generation
+    # profile: stream/max_tokens/temperature/top_p/reasoning_effort). When
+    # set, EVERY provider attempt's kwargs must match before the reservation
+    # is made; a mismatch fails closed instead of sending an off-profile
+    # request.
+    required_request_profile: Any = None
 
     def __post_init__(self) -> None:
         for name, minimum in (("estimated_input_tokens", 0), ("max_output_tokens", 1)):
@@ -138,6 +144,14 @@ class RequestGuard:
             model_kwargs[output_key] = min(requested, self.config.max_output_tokens)
             if output_key != "max_tokens":
                 model_kwargs.pop("max_tokens", None)
+        if self.config.required_request_profile is not None:
+            # Off-profile requests fail closed BEFORE any reservation: the
+            # acceptance pins exact sampling/transport parameters on every
+            # actual operator request (no silent drift from the reviewed
+            # profile).
+            for key, expected in dict(self.config.required_request_profile).items():
+                if (model_kwargs or {}).get(key) != expected:
+                    raise BudgetError(f"request_profile_mismatch:{key}")
 
         reservation_box: dict[str, Any] = {}
 

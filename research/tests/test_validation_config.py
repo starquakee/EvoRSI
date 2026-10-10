@@ -26,7 +26,7 @@ DEFAULTS = {
     "experience_enabled": True,
     "prompt_memory_enabled": False,
     "stream": True,
-    "max_output_tokens": 4096,
+    "max_output_tokens": 8192,
 }
 
 
@@ -145,7 +145,7 @@ class TestInnerEvoValidationConfig:
         assert cfg.experience_enabled is True
         assert cfg.prompt_memory_enabled is False
         assert cfg.stream_enabled is True
-        assert cfg.max_output_tokens == 4096
+        assert cfg.max_output_tokens == 8192
 
     def test_defaults_match_trustworthy_validation_yaml(self):
         # The Evo-side experiment config (trustworthy_validation.yaml) uses
@@ -179,7 +179,7 @@ class TestInnerEvoValidationConfig:
         guard = cfg.as_transport_guard_config()
         assert guard == {
             "estimated_input_tokens": 8000,
-            "max_output_tokens": 4096,
+            "max_output_tokens": 8192,
             "request_deadline_seconds": 600.0,
         }
 

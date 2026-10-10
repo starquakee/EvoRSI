@@ -35,6 +35,7 @@ from research.contracts.budget import (
     BudgetError,
     BudgetLedger,
     CancellationToken,
+    Cancelled,
 )
 from research.contracts.persist import atomic_write_json
 from research.contracts.results import hash_config
@@ -44,11 +45,18 @@ from research.search.acceptance_config import (
     RunnerReviewRefused,
     check_runner_review,
 )
+from research.search.budget_control import MainBudgetControl
 from research.search.credentials import (
     CredentialError,
     KimiAuthHelper,
     ManagedKimiCredentials,
     assert_redacted,
+)
+from research.search.generation_outcome import (
+    build_outcome_record,
+    classify_extraction_failure,
+    feedback_for_failure,
+    strip_thinking,
 )
 from research.search.sandbox_task import SandboxAcceptanceTask
 from research.search.search_vector import RETAINED_DIMS, safety_gate
@@ -72,6 +80,11 @@ _OPERATOR_YAMLS = {
 }
 _SOLVER_DEFAULTS_YAML = "mlebench/evo.yaml"
 
+#: Acceptance sampling pins (managed k3 profile). The builder, the preflight
+#: and the transport guard all enforce these exact values.
+PROFILE_TEMPERATURE = 1.0
+PROFILE_TOP_P = 0.95
+
 TASK_DESCRIPTION = (
     "hello_synth (synthetic acceptance task). A public training CSV and a "
     "public test CSV are provided. Train a classifier predicting the binary "
@@ -84,12 +97,17 @@ DATA_DESCRIPTION = (
     "(columns: id,f1,f2). No other data files exist or may be accessed."
 )
 PUBLIC_USER_PROMPT = (
-    "Write a Python program that reads os.environ['DATA_DIR']/train.csv and "
-    "test.csv, fits any reasonable classifier (numpy/pandas/scikit-learn are "
-    "installed), and writes submission.csv in the current working directory "
-    "with header 'id,label' and exactly one row per test id, in test order, "
-    "with label 0 or 1. Do not access any path outside DATA_DIR and the "
-    "current working directory; do not use the network."
+    "Write ONE complete, concise Python program (at most about 120 lines) "
+    "that reads os.environ['DATA_DIR']/train.csv and test.csv, fits a single "
+    "reasonable classifier (numpy/pandas/scikit-learn are installed), and "
+    "writes submission.csv in the current working directory with header "
+    "'id,label' and exactly one row per test id, in test order, with label 0 "
+    "or 1. Respond with exactly one complete ```python code block and nothing "
+    "else: no essay, no explanation before or after the code, no complex "
+    "ensemble or multi-stage pipeline, and no partial or truncated code — a "
+    "short complete program is required, an incomplete one is discarded. Do "
+    "not access any path outside DATA_DIR and the current working directory; "
+    "do not use the network."
 )
 
 
@@ -112,6 +130,11 @@ def config_identity_hash(decoded: Mapping[str, Any]) -> str:
             "prompt_memory_enabled": pins.prompt_memory_enabled,
             "stream": pins.stream_enabled,
             "max_output_tokens": pins.max_output_tokens,
+            "reasoning_effort": pins.reasoning_effort,
+            # litellm forwards reasoning_effort for openai/* only via this
+            # per-request allowlist (drop_params stays False) — recorded so
+            # the compatibility choice is visible in the config identity.
+            "allowed_openai_params": ["reasoning_effort"],
             "operator_generation_attempts": 1,
         },
     })
@@ -128,6 +151,8 @@ class InnerRunSpec:
     runner_commit: str
     resource_type: str = ac.RESOURCE_TYPE
     job_timeout_seconds: int = ac.JOB_TIMEOUT_SECONDS
+    runtime_dir: str = str(ac.RUNTIME_DIR)  # default round; retry rounds need auth
+    future_main_requests: int = 0  # main calls reserved for later outer configs
 
     def validate(self) -> None:
         if not self.run_id or not all(c.isalnum() or c in "-_" for c in self.run_id):
@@ -135,16 +160,21 @@ class InnerRunSpec:
         if set(self.decoded.keys()) != set(_RETAINED_NAMES):
             raise AcceptanceError("spec_decoded_dims_mismatch")
         safety_gate(dict(self.decoded))
-        for rel in (self.run_dir, self.ledger_path):
+        for rel in (self.run_dir, self.ledger_path, self.runtime_dir):
             path = Path(rel)
             if path.is_absolute() or ".." in path.parts:
                 raise AcceptanceError("spec_path_not_relative")
+        runtime = Path(self.runtime_dir)
+        if not ac.is_valid_round_runtime_dir(runtime):
+            # Only the one fixed acceptance location or a well-formed
+            # retry-round directory — never an arbitrary fresh runtime.
+            raise AcceptanceError("spec_runtime_dir_invalid")
         run_dir = Path(self.run_dir)
-        if not run_dir.is_relative_to(Path(ac.RUNTIME_DIR) / "runs"):
+        if not run_dir.is_relative_to(runtime / "runs"):
             raise AcceptanceError("spec_run_dir_outside_runtime")
         if run_dir.name != self.run_id:
             raise AcceptanceError("spec_run_dir_outside_runtime")
-        if Path(self.ledger_path) != Path(ac.RUNTIME_DIR) / ac.LEDGER_FILENAME:
+        if Path(self.ledger_path) != runtime / ac.LEDGER_FILENAME:
             raise AcceptanceError("spec_ledger_path_mismatch")
         if not self.runner_commit:
             raise AcceptanceError("spec_runner_commit_missing")
@@ -152,6 +182,12 @@ class InnerRunSpec:
             raise AcceptanceError("spec_resource_type_invalid")
         if isinstance(self.job_timeout_seconds, bool) or not 30 <= int(self.job_timeout_seconds) <= 1800:
             raise AcceptanceError("spec_job_timeout_invalid")
+        if (
+            isinstance(self.future_main_requests, bool)
+            or not isinstance(self.future_main_requests, int)
+            or not 0 <= self.future_main_requests <= 24
+        ):
+            raise AcceptanceError("spec_future_main_requests_invalid")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -163,6 +199,8 @@ class InnerRunSpec:
             "runner_commit": self.runner_commit,
             "resource_type": self.resource_type,
             "job_timeout_seconds": self.job_timeout_seconds,
+            "runtime_dir": self.runtime_dir,
+            "future_main_requests": self.future_main_requests,
         }
 
     @staticmethod
@@ -178,6 +216,8 @@ class InnerRunSpec:
                 runner_commit=str(data["runner_commit"]),
                 resource_type=str(data.get("resource_type", ac.RESOURCE_TYPE)),
                 job_timeout_seconds=int(data.get("job_timeout_seconds", ac.JOB_TIMEOUT_SECONDS)),
+                runtime_dir=str(data.get("runtime_dir", str(ac.RUNTIME_DIR))),
+                future_main_requests=data.get("future_main_requests", 0),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise AcceptanceError("spec_malformed") from exc
@@ -240,6 +280,173 @@ def make_prepare_operator(
             client.api_key = token
 
     return prepare_operator
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    """Durably persist exact bytes (tmp + replace), never a partial file."""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def acceptance_request_profile() -> dict[str, Any]:
+    """The exact transport kwargs every actual operator request must carry.
+
+    Mirrors the credential-free litellm profile enforced by
+    build_acceptance_solver; the budget guard refuses any off-profile request
+    BEFORE reserving budget.
+    """
+    pins = InnerEvoValidationConfig()
+    return {
+        # The transport carries the provider-prefixed id (litellm profile:
+        # openai/k3); any other model is refused before reservation.
+        "model": f"openai/{ac.MODEL_ID}",
+        "stream": True,
+        "max_tokens": pins.max_output_tokens,
+        "temperature": PROFILE_TEMPERATURE,
+        "top_p": PROFILE_TOP_P,
+        "reasoning_effort": pins.reasoning_effort,
+    }
+
+
+def check_cooperative_stop(stop_file: Path) -> str | None:
+    """Run-scoped cooperative stop request (a touched file next to the run
+    artifacts). Checked ONLY at safe boundaries — never mid-request and never
+    a host-wide process action."""
+    try:
+        if stop_file.is_file():
+            return "stop_requested_file"
+    except OSError:
+        return "stop_check_unreadable"
+    return None
+
+
+def make_generation_outcome_sink(
+    *,
+    run_dir: Path,
+    run_id: str,
+    secrets: Sequence[str],
+    stop_file: Path,
+    solver: Any,
+) -> Any:
+    """Persist every generation's source bytes and precise outcome BEFORE the
+    operator trace and any candidate evaluation.
+
+    For each provider attempt (each separately budgeted) this writes, in
+    order: the raw visible response text, the extracted program (when one
+    exists), and one generation-outcomes.jsonl record binding
+    finish_reason, provider token counts (numeric only), visible/extracted
+    length+hash and the extraction/truncation classification. A failed
+    extraction is never collapsed into an unexplained ``empty_candidate_code``
+    and never salvaged into fabricated code. After persisting, the
+    run-scoped cooperative stop file is honored: the run stops BETWEEN
+    generation and scoring with complete artifacts instead of a
+    signal-time gap.
+    """
+    outcomes_path = run_dir / "generation-outcomes.jsonl"
+    generated_dir = run_dir / "generated"
+    state = {"seq": 0}
+
+    def sink(operator: str, completion_text: Any, extracted_code: Any, metrics: Any) -> None:
+        state["seq"] += 1
+        sequence = state["seq"]
+        visible = strip_thinking(completion_text if isinstance(completion_text, str) else "")
+        extracted = extracted_code if isinstance(extracted_code, str) else ""
+        classification = "ok" if extracted.strip() else classify_extraction_failure(visible)
+        artifacts: dict[str, str] = {}
+        generated_dir.mkdir(exist_ok=True)
+        # Raw visible response (never reasoning content), redaction-checked.
+        assert_redacted(visible, *secrets)
+        response_name = f"{sequence:03d}-{operator}.response.txt"
+        _atomic_write_text(generated_dir / response_name, visible)
+        artifacts["response"] = f"generated/{response_name}"
+        if extracted.strip():
+            assert_redacted(extracted, *secrets)
+            code_name = f"{sequence:03d}-{operator}.py"
+            _atomic_write_text(generated_dir / code_name, extracted)
+            artifacts["code"] = f"generated/{code_name}"
+        record = build_outcome_record(
+            run_id=run_id,
+            sequence=sequence,
+            operator=operator,
+            visible_text=visible,
+            extracted_code=extracted,
+            classification=classification,
+            metrics=metrics,
+            artifacts=artifacts,
+        )
+        assert_redacted(record, *secrets)
+        with open(outcomes_path, "a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, sort_keys=True) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        solver.last_generation_feedback = (
+            None if classification == "ok" else feedback_for_failure(record)
+        )
+        stop_reason = check_cooperative_stop(stop_file)
+        if stop_reason is not None:
+            raise Cancelled(f"cooperative_stop:{stop_reason}")
+
+    return sink
+
+
+def job_outcome_counts(jobs: Sequence[Mapping[str, Any]]) -> dict[str, int]:
+    """Separate submitted/executed/scored/failed job counts.
+
+    Source/cleanup proof alone never means scored: a job only counts as
+    ``scored`` with fully verified evaluator evidence; a failed execution
+    keeps its own bucket.
+    """
+    counts = {
+        "submitted": 0,
+        "executed_and_cleaned": 0,
+        "scored": 0,
+        "execution_failed": 0,
+        "scoring_failed": 0,
+        "admission_denied": 0,
+        "timeout": 0,
+        "cancelled": 0,
+        "unscored_other": 0,
+    }
+    for job in jobs:
+        status = job.get("status")
+        if status == "admission_denied":
+            counts["admission_denied"] += 1
+            continue
+        if not job.get("job_id"):
+            continue  # never reached the sandbox
+        counts["submitted"] += 1
+        if (
+            job.get("worker_cleanup_verified") is True
+            and job.get("execution_never_started") is not True
+        ):
+            counts["executed_and_cleaned"] += 1
+        if job.get("evidence_verified") is True:
+            counts["scored"] += 1
+        elif status == "cancelled":
+            counts["cancelled"] += 1
+        elif status == "timeout":
+            counts["timeout"] += 1
+        elif status == "failed" and job.get("scoring_result") == "scoring_failed":
+            # A trusted-scoring rejection is not a candidate code crash.
+            counts["scoring_failed"] += 1
+        elif status == "failed":
+            counts["execution_failed"] += 1
+        else:
+            counts["unscored_other"] += 1
+    return counts
+
+
+def _generation_summary(outcomes_path: Path) -> dict[str, int]:
+    summary: dict[str, int] = {}
+    if not outcomes_path.exists():
+        return summary
+    for line in outcomes_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        classification = str(json.loads(line).get("classification") or "unknown")
+        summary[classification] = summary.get(classification, 0) + 1
+    return summary
 
 
 def build_acceptance_solver(spec: InnerRunSpec, *, repo_root: Path) -> Any:
@@ -310,10 +517,17 @@ def build_acceptance_solver(spec: InnerRunSpec, *, repo_root: Path) -> Any:
         raise AcceptanceError("stream_must_be_enabled")
     if profile_params.get("max_tokens") != pins.max_output_tokens:
         raise AcceptanceError("litellm_max_tokens_mismatch")
+    if profile_params.get("reasoning_effort") != pins.reasoning_effort:
+        # k3 default is high; disabling thinking silently routes to K2.8 —
+        # both are forbidden. The profile must pin low explicitly.
+        raise AcceptanceError("litellm_reasoning_effort_mismatch")
     for parameter in ("temperature", "top_p"):
         value = profile_params.get(parameter)
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise AcceptanceError(f"litellm_{parameter}_missing")
+        expected = PROFILE_TEMPERATURE if parameter == "temperature" else PROFILE_TOP_P
+        if float(value) != expected:
+            raise AcceptanceError(f"litellm_{parameter}_mismatch")
 
     def build_operator(name: str, relative: str) -> Any:
         operator_yaml = load_yaml(solver_root / "operators" / relative)
@@ -332,6 +546,12 @@ def build_acceptance_solver(spec: InnerRunSpec, *, repo_root: Path) -> Any:
         # pinned sampling parameters.
         generation_kwargs["stream"] = True
         generation_kwargs["max_tokens"] = pins.max_output_tokens
+        generation_kwargs["reasoning_effort"] = pins.reasoning_effort
+        # The installed litellm rejects reasoning_effort for openai/* custom
+        # models unless allowlisted per request; drop_params stays False so
+        # an unforwardable parameter always fails loudly (never silently
+        # dropped, never a hidden fallback).
+        generation_kwargs["allowed_openai_params"] = ["reasoning_effort"]
         generation_kwargs["temperature"] = float(profile_params["temperature"])
         generation_kwargs["top_p"] = float(profile_params["top_p"])
         return OperatorConfig(
@@ -455,9 +675,12 @@ def _operator_counts(trace_path: Path) -> dict[str, int]:
 _TRACE_REQUEST_KEYS = (
     "model",
     "max_tokens",
+    "max_completion_tokens",
     "stream",
     "temperature",
     "top_p",
+    "reasoning_effort",
+    "allowed_openai_params",
     "request_timeout",
     "stream_options",
     "num_retries",
@@ -475,6 +698,16 @@ def run_inner(spec_path: Path, *, repo_root: Path) -> int:
     spec = InnerRunSpec.from_json_file(spec_path)
     if spec.runner_commit != ac.git_head_commit(repo_root):
         raise AcceptanceError("spec_runner_commit_mismatch")
+    if Path(spec.runtime_dir) != ac.RUNTIME_DIR:
+        # A retry-round spec is only executable under a supervisor-written
+        # authorization bound to this commit AND this exact round identity;
+        # there is no automatic new directory or budget.
+        try:
+            round_id, _round_caps = ac.check_round_authorization(repo_root)
+        except ac.RoundAuthorizationRefused as exc:
+            raise AcceptanceError(f"round_authorization_required:{exc}") from exc
+        if ac.round_runtime_dir(round_id) != Path(spec.runtime_dir):
+            raise AcceptanceError("round_authorization_round_mismatch")
     ledger_path = repo_root / spec.ledger_path
     if not ledger_path.exists():
         # The child never creates or resets the one acceptance ledger.
@@ -492,7 +725,10 @@ def run_inner(spec_path: Path, *, repo_root: Path) -> int:
     from dojo.utils.logger import config_logger  # noqa: PLC0415
     from research.adapters.sandbox_eval_client import SandboxEvalClient  # noqa: PLC0415
     from research.search.budget_transport import TransportGuardConfig  # noqa: PLC0415
-    from research.search.run_control import run_guarded_search  # noqa: PLC0415
+    from research.search.run_control import (  # noqa: PLC0415
+        controlled_termination_reason,
+        run_guarded_search,
+    )
 
     config_logger(None)  # low-resource global logger: no file/wandb handlers
 
@@ -551,6 +787,7 @@ def run_inner(spec_path: Path, *, repo_root: Path) -> int:
         guard_config = TransportGuardConfig(
             **InnerEvoValidationConfig().as_transport_guard_config(),
             attempt_sink=attempt_sink,
+            required_request_profile=acceptance_request_profile(),
         )
 
         error: str | None = None
@@ -561,6 +798,21 @@ def run_inner(spec_path: Path, *, repo_root: Path) -> int:
         cleanup_verified = False
         with BudgetLedger.open(ledger_path) as ledger:
             start_snapshot = ledger.snapshot()
+            if start_snapshot["stopped"] is not None:
+                # The child never runs against a stopped ledger (e.g. the
+                # old, stopped acceptance ledger): refuse BEFORE any provider
+                # call or sandbox submission.
+                raise AcceptanceError("acceptance_ledger_stopped")
+            pins = InnerEvoValidationConfig()
+            main_minimum = (
+                pins.inner_num_generations * pins.individuals_per_generation
+                + spec.future_main_requests
+            )
+            if start_snapshot["remaining"]["requests"] < main_minimum:
+                # Lower bound: this run plus all FUTURE outer configs need at
+                # least their 3x2 main generations; starting with less would
+                # waste the remaining calls.
+                raise AcceptanceError("remaining_budget_insufficient")
             # Anchor to the ORIGINAL persisted deadline (started_at + persisted
             # limits), never time.time()+remaining, so a restarted child cannot
             # silently extend the acceptance window.
@@ -604,6 +856,28 @@ def run_inner(spec_path: Path, *, repo_root: Path) -> int:
             solver = build_acceptance_solver(spec, repo_root=repo_root)
             trace_path = run_dir / "operator-trace.jsonl"
             solver.operator_tracer = OperatorTraceWriter(trace_path)
+            # Generation artifacts + precise outcomes persist BEFORE the
+            # operator trace / any evaluation; the run-scoped stop file is
+            # honored at safe boundaries (before an operator and right after
+            # a settled, persisted generation — never mid-request).
+            stop_file = run_dir / "stop-request.json"
+            solver.generation_outcome_sink = make_generation_outcome_sink(
+                run_dir=run_dir,
+                run_id=spec.run_id,
+                secrets=secrets,
+                stop_file=stop_file,
+                solver=solver,
+            )
+            # Reserve current+future MAIN requests; optional debug attempts
+            # proceed only with one extra slack request (debug is an upper
+            # bound, never a required minimum).
+            solver.budget_control = MainBudgetControl(
+                ledger,
+                total_main=pins.inner_num_generations * pins.individuals_per_generation,
+                future_main=spec.future_main_requests,
+                control_log_path=run_dir / "budget-control.jsonl",
+                run_id=spec.run_id,
+            )
             prepare = make_prepare_operator(credentials, operator_clients(solver), secrets)
             try:
                 run_guarded_search(
@@ -616,9 +890,10 @@ def run_inner(spec_path: Path, *, repo_root: Path) -> int:
                     cancel_live_jobs=client.cancel_all_live,
                     checkpoint_path=run_dir / "search-control-checkpoint.json",
                     prepare_operator=prepare,
+                    cooperative_stop=lambda: check_cooperative_stop(stop_file),
                 )
             except BaseException as exc:  # ledger/token already stopped by control
-                error = type(exc).__name__
+                error = controlled_termination_reason(exc)
             if error is None:
                 best_node = solver.journal.get_best_node()
                 metric = getattr(best_node, "metric", None)
@@ -664,6 +939,7 @@ def run_inner(spec_path: Path, *, repo_root: Path) -> int:
         main_candidates = sum(counts[name] for name in ("draft", "improve", "crossover"))
         generations_completed = int(getattr(solver.state, "current_generation", 0))
         prediction_artifacts = bind_prediction_snapshots(task.jobs, run_dir, repo_root)
+        outcomes_path = run_dir / "generation-outcomes.jsonl"
         status = "completed" if error is None and best_score is not None else "failed"
         result = {
             "schema": INNER_RESULT_SCHEMA,
@@ -694,6 +970,11 @@ def run_inner(spec_path: Path, *, repo_root: Path) -> int:
             ),
             "prediction_artifacts": prediction_artifacts,
             "jobs": task.jobs,
+            "job_counts": job_outcome_counts(task.jobs),
+            "generation_outcomes_sha256": (
+                _sha256_file(outcomes_path) if outcomes_path.exists() else ""
+            ),
+            "generation_summary": _generation_summary(outcomes_path),
             "job_ids": sorted({j["job_id"] for j in task.jobs if j.get("job_id")}),
             "worker_cleanup_verified": cleanup_verified,
             "model_usage": {

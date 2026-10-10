@@ -6,7 +6,8 @@ Renamed to smoke_adapter.py so pytest does not collect it: the good-candidate
 path submits a REAL sandbox job and must never run in automated tests.
 Import path resolution changed to repo-root relative.
 
-用法（需要 legacy GPU venv 与 SANDBOX_ENDPOINT/SANDBOX_API_KEY 环境变量）：
+用法（需要 legacy GPU venv 与 SANDBOX_API_KEY 环境变量；端点默认
+http://127.0.0.1:6581 隔离栈，SANDBOX_ENDPOINT 可显式覆盖/回退 6580）：
     <legacy-venv-python> -m research.experiments.smoke_adapter
 """
 import os

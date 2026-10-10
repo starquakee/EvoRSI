@@ -25,6 +25,12 @@ Consolidated under research/experiments for US-001 with these changes:
     <legacy-venv-python> -m research.experiments.de_formal_baseline
 环境：repo 根 .env 或进程环境提供 Kimi key 与 SANDBOX_API_KEY；
     OPENMLE_MODEL_ID 决定 Evo 所用模型（默认 k3）。
+
+US-010 端点切换说明（重要）：本基线评测任务 titanic-extended@1 只部署在旧栈
+（6580）；新隔离栈（6581，当前所有客户端默认）的可信评测器注册表只允许
+hello_synth 合成任务，对本任务会 fail closed（task_not_allowlisted）。因此本
+脚本在端点解析为新栈默认时拒绝启动；要复现旧基线必须显式回退：
+    SANDBOX_URL=http://127.0.0.1:6580（连同旧栈 SANDBOX_API_KEY）
 """
 from __future__ import annotations
 
@@ -46,6 +52,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from research.adapters.endpoints import DEFAULT_ENDPOINT  # noqa: E402
 from research.adapters.safe_rsi_de_adapter import (  # noqa: E402
     LOWER, UPPER, decode, hydra_overrides, safety_gate,
 )
@@ -102,13 +109,25 @@ def load_env() -> dict[str, str]:
         OPENMLE_LEADERBOARD_DIR=str(REPO / "artifacts/gym-example/leaderboards"),
         OPENMLE_SUBMIT_DATA_DIR_ROOT="/mnt/pubdatasets2/tasks",
         OPENMLE_CONFIG_NAME="experiment/openmle_evo_smoke",
-        SANDBOX_URL=env.get("SANDBOX_URL", "http://127.0.0.1:6580"),
+        SANDBOX_URL=env.get("SANDBOX_URL", DEFAULT_ENDPOINT),
         SANDBOX_CPU_API_KEY=env["SANDBOX_API_KEY"],
         SANDBOX_GPU_API_KEY=env["SANDBOX_API_KEY"],
         AIRA_LITELLM_TIMEOUT="900",
         AIRA_LITELLM_NUM_RETRIES="4",
         AIRA_LITELLM_STREAM="true",   # k3 大请求非流式会被挂起，必须流式
     )
+    if env["SANDBOX_URL"].rstrip("/") == DEFAULT_ENDPOINT:
+        # Honest guard (US-010): the titanic-extended@1 task package and its
+        # scoring path exist only on the legacy 6580 stack; the isolated
+        # 6581 evaluator registry allowlists the synthetic hello_synth task
+        # only and would fail closed for every candidate. Refuse before any
+        # Evo/LLM spend instead of burning the whole budget on penalties.
+        raise RuntimeError(
+            "legacy_baseline_requires_rollback_stack: task "
+            f"{TASK} is not registered on the isolated default stack "
+            f"({DEFAULT_ENDPOINT}); run only with an explicit rollback, e.g. "
+            "SANDBOX_URL=http://127.0.0.1:6580 plus the legacy stack key."
+        )
     return env
 
 

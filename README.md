@@ -20,23 +20,37 @@ research implementation. MetaDE sources are retained for future research.
 
 ## Current status
 
-**Research prototype — the full real-model acceptance is incomplete.**
+**Research prototype — the initial ten-story implementation and bounded real-model acceptance are complete.**
 
-The first inner run completed **3 generations × 2 main candidates** with all four
-operators observed. Across the bounded acceptance, **17 model requests** consumed
-**81,717 tokens** and produced **7 sandbox jobs**: **6 scored successfully and 1
-failed during code execution**. The run was stopped when
-the remaining request budget could no longer cover the minimum outer population.
-The default deployment switch was not performed. One interrupted, unscored debug
-node also has an incomplete journal artifact and is explicitly excluded from
-accepted results.
+The second, explicitly authorized acceptance round completed four real inner
+runs, each with **3 generations × 2 main candidates**, followed by one native
+iStratDE ask/evaluate/tell update. **24 model requests** used **49,903 tokens**
+in about **11 minutes 17 seconds**. All **24 sandbox jobs** received independently
+verified scores; best accuracy per configuration was **92.5%, 92.5%, 92.5%, 90%**.
+Observed operators were draft 8, improve 6, crossover 10; no debug call was
+needed in this round. Reusing the first run in the outer loop added zero model cost.
 
-These are integration and boundary checks on a synthetic task, not evidence of
-algorithmic superiority or an unrestricted security guarantee. Equal-budget,
-multi-seed comparisons and MetaDE experiments remain future work.
+The research client now defaults to the isolated local gateway **127.0.0.1:6581**,
+with explicit legacy **6580** rollback configuration. Default task/data routing,
+source identity, independent scoring, and cleanup were verified with fixed
+synthetic jobs. The old stack remains preserved. Rollback verification covers
+request configuration and read-only reachability; it does not claim a new
+end-to-end legacy candidate evaluation.
 
-See [the acceptance report](reports/us009-real-acceptance.md) and
-[machine-readable evidence](reports/us009-real-acceptance.json).
+The first round remains documented as **incomplete**: 17 requests, 81,717 tokens,
+7 executed jobs (6 scored and 1 execution failure). Its stopped ledger and
+incomplete unscored-node artifact were not rewritten. The two rounds total
+**41 model requests and 131,620 tokens**.
+
+These are integration and boundary checks on a **120-row training / 40-row test
+synthetic classification task**, with one seed and one outer update. Scores fed
+back into search are not independent generalization evidence. No algorithmic
+superiority is established; equal-budget, multi-seed comparisons and MetaDE
+integration remain future work.
+
+See the [second-round acceptance](reports/us009-round2-acceptance.md),
+[completed handoff](reports/us010-switch-handoff.md), and
+[preserved first-round report](reports/us009-real-acceptance.md).
 
 ## Repository layout
 
@@ -64,10 +78,12 @@ environments, credentials, images, and runtime state are not. Live acceptance
 requires local credentials, a reviewed configuration, and an explicitly authorized
 budget. It does not start automatically from a clone.
 
-Before publication, the local implementation passed 788 research tests and 135 Evo
-tests (2 skipped). One existing Evo SFT-path test still failed because an earlier
-`build_tasks.py` file was absent. These results describe the recorded local setup;
-they are not a fresh-clone CI result.
+The reviewed local implementation passed **905 research tests** and **146 Evo
+tests**, with **3 explicit skips**. The absent external OpenMLE-ERL/SFT integration
+is skipped and remains unverified; its original assertions run when that component
+exists. Scoped type checking passed on 96 owned research/experiment/test files.
+These describe the recorded local environment, not a fresh-clone CI result.
+Publication-specific checks and exclusions are documented below.
 
 ## Attribution and licenses
 

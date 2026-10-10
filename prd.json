@@ -126,8 +126,8 @@
         "Persist redacted request usage, operator trace, job IDs, score direction, source/policy hashes, rejection and cost evidence; all scores through isolated evaluator. No algorithm superiority claims."
       ],
       "priority": 9,
-      "passes": false,
-      "notes": "2026-10-09: INCOMPLETE real acceptance at runner b388399. One immutable ledger:17 requests/81717 tokens/1530.2s at stop, no open reservation. cfg0 completed3 generations/6 main candidates with all four real operators; cfg1 partial; cfg2/3 zero model calls after ledger stopped. Minimum24 main requests plus7 already-incurred debug calls exceeded30, so supervisor stopped at settled usage boundary; final8 debug.7 scored jobs verified source/predictions/cleanup; one cfg0 cache hit zero incremental cost. Native tell received failure penalties for3 configs and is NOT complete outer acceptance. Last cfg1 unscored debug trace has no journal node due interruption; explicitly unverified, never cached. Evidence reports/us009-real-acceptance.{json,md}; full ignored runtime retained. No reset/resume/extra budget, no US010/default switch. Old six containers remain running; task-owned auth helper stopped."
+      "passes": true,
+      "notes": "2026-10-10: Second round expressly authorized by the user and independently accepted at runner 17a00e30ef08bbf82f54110d1849405286ad0176. Four real inner runs each 3 generations/6 main candidates; native iStratDE ask/evaluate/tell; 24 requests/49903 tokens/676.8s, 0 unsettled usage. 24 independently verified scored jobs, 0 failed jobs. Operators {'crossover': 10, 'debug': 0, 'draft': 8, 'improve': 6}. Cache reuse 0 incremental model cost. Audit issues=[]; source/prediction/journal/generation/provider usage hashes verified, trusted scores recomputed. Old ledger unchanged, first round remains INCOMPLETE with17 requests/81717 tokens/7 executed jobs(6 scored+1 execution-failed). Aggregate 41 requests/131620 tokens. Evidence reports/us009-round2-acceptance.json and .md. No superiority claim. No further real round authorized."
     },
     {
       "id": "US-010",
@@ -140,8 +140,8 @@
         "Commit locally only, no remote push. Produce concise report with evidence/commit links and pending next-stage comparisons/MetaDE work."
       ],
       "priority": 10,
-      "passes": false,
-      "notes": "Not started: US009 real acceptance is incomplete. Preserve existing defaults and old rollback stack; no switch, deletion, server change or remote push."
+      "passes": true,
+      "notes": "2026-10-10: US010 independently accepted. Main implementation732f481 plus final supervisor fixes: verified6581 default with registeredhello_synth/data mount, explicit6580 rollback plus data/task overrides in actualCLI and publicwrapper, unsupportedlegacyTitanic default blocked beforemodelspend. Realdefaultfixedjobs1776de3689834492 and f3b9fc8599f74d85 scored0.9 with source+cleanup proof; oldstackreadonlyhealth/route tested, no extraoldcandidatejob. Final905researchPASS/146EvoPASS3honestSKIP,96ownedresearchmodulesmypyPASS,ledger164artifactaudit41requests131620tokensunchanged,new/oldhealthy,secret/diffchecks. Reports/us010-switch-handoff.{json,md}. ExternalSFT and freshmachineinstall unverified. NoadditionalLLMrun/noreset/noadditionalround/no remotepush."
     }
   ]
 }

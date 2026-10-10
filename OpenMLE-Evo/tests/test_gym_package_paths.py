@@ -136,15 +136,26 @@ def test_existing_evo_phase_paths_and_scores(tmp_path, monkeypatch, submit_root)
     )
 
 
+SFT_BUILDER = (
+    ROOT.parent / "OpenMLE-ERL/SFT/third_party/aira-evo/examples/mle_bench/build_tasks.py"
+)
+
+
+@pytest.mark.skipif(
+    not SFT_BUILDER.exists(),
+    reason=(
+        "external OpenMLE-ERL/SFT repository is not present in this "
+        "environment; the SFT integration is optional and is NOT validated "
+        "here (the real test runs unchanged when the component exists)"
+    ),
+)
 def test_same_parquet_is_consumed_by_existing_sft_builder(tmp_path):
     _, _, config = build(tmp_path, f"/mounted/tasks/{TASK}", "/mounted/tasks")
     sft = ROOT.parent / "OpenMLE-ERL/SFT"
     output = tmp_path / "sft-built"
     output.mkdir()
     script = output / "build_tasks.py"
-    shutil.copyfile(
-        sft / "third_party/aira-evo/examples/mle_bench/build_tasks.py", script
-    )
+    shutil.copyfile(SFT_BUILDER, script)
     env = os.environ.copy()
     env["PYTHONPATH"] = str(sft)
     result = subprocess.run(

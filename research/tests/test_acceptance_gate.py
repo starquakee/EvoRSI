@@ -113,15 +113,23 @@ def test_live_refuses_before_ledger_auth_or_model(monkeypatch, tmp_path):
     monkeypatch.setattr(ap, "_default_child_runner", forbidden_child)
 
     ledger = REPO_ROOT / ac.RUNTIME_DIR / ac.LEDGER_FILENAME
-    assert not ledger.exists()  # prep-phase invariant
-    with pytest.raises(RunnerReviewRefused, match="runner_review_unavailable"):
+    # Post-run reality: the original stopped acceptance ledger EXISTS and is
+    # immutable. The refusal must happen before touching it (or before
+    # creating anything, in a fresh tree).
+    ledger_bytes_before = ledger.read_bytes() if ledger.exists() else None
+    with pytest.raises(RunnerReviewRefused, match="runner_review_"):
         ap.live(REPO_ROOT)
-    assert not ledger.exists()
-    assert not (REPO_ROOT / ac.RUNTIME_DIR).exists()
+    if ledger_bytes_before is None:
+        assert not ledger.exists()
+        assert not (REPO_ROOT / ac.RUNTIME_DIR).exists()
+    else:
+        assert ledger.read_bytes() == ledger_bytes_before
 
 
 def test_main_live_reports_machine_readable_refusal(capsys):
     code = ap.main(["live", "--repo-root", str(REPO_ROOT)])
     assert code == 2
     out = json.loads(capsys.readouterr().out)
-    assert out["refused"] == "runner_review_unavailable"
+    # Without a review file binding the CURRENT HEAD, live always refuses;
+    # the exact rule depends on whether a stale binding exists on disk.
+    assert out["refused"].startswith("runner_review_")

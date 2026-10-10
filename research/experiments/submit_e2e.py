@@ -3,25 +3,40 @@
 用法：
     SANDBOX_API_KEY=<key> python3 submit_e2e.py
 环境变量：
-    SANDBOX_ENDPOINT  默认 http://127.0.0.1:6580
-    SANDBOX_API_KEY   必填，本地 controller 的 dev key
+    SANDBOX_ENDPOINT  默认 http://127.0.0.1:6581（US-010：verified 隔离栈）；
+                      显式设为 http://127.0.0.1:6580 回退旧栈（rollback only）
+    SANDBOX_API_KEY   必填，对应栈的 API key（新栈见 .runtime/rsi-trustworthy/auth.env）
+    SANDBOX_DATA_DIR  默认 /mnt/rsi_data/hello_synth；回退旧栈时显式设置旧数据目录
+    SANDBOX_TASK_ID   默认 hello_synth；回退旧栈时显式设置旧任务标识
 """
 from __future__ import annotations
 
 import json
 import os
+import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
-ENDPOINT = os.environ.get("SANDBOX_ENDPOINT", "http://127.0.0.1:6580")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from research.adapters.endpoints import resolve_endpoint  # noqa: E402
+
+ENDPOINT = resolve_endpoint()
 API_KEY = os.environ["SANDBOX_API_KEY"]
 JOB_SOURCE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hello_synth_job.py")
 
 payload = {
     "name": "hello_synth_e2e",
-    "task_id": "hello_synth_e2e",
+    # US-010 新栈契约：task_id 必须是评测器注册表允许的任务；
+    # data_dir 指向新栈公共数据挂载（dispatcher 会把 DATA_DIR 导出为
+    # <data_dir>/data/public）。旧栈回退时需显式恢复旧值
+    # task_id=hello_synth_e2e / data_dir=/mnt/pubdatasets2/tasks/hello_synth。
+    "task_id": os.environ.get("SANDBOX_TASK_ID", "hello_synth"),
     "code": open(JOB_SOURCE, encoding="utf-8").read(),
-    "data_dir": "/mnt/pubdatasets2/tasks/hello_synth",
+    "data_dir": os.environ.get("SANDBOX_DATA_DIR", "/mnt/rsi_data/hello_synth"),
     "resource_type": os.environ.get("RESOURCE_TYPE", "gpu"),
     "gpu_count": 1,
     "timeout": 600,

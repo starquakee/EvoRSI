@@ -23,7 +23,7 @@ if dirty:
 prompt=Path(sys.argv[1]).read_text()+f"\nThis iteration is restricted to {sid}. No other story. Run focused verification and commit evidence locally."
 if sid == 'US-009':
  prompt += "\nUS-009 PREPARATION PHASE ONLY: implement the complete real-acceptance runner/config and meaningful OFFLINE tests, commit locally, leave US-009 passes=false, and STOP with exact invocation/evidence. Do NOT create/start the persistent acceptance ledger and do NOT send any real model-generation request. The supervisor will review the committed runner, then execute the one real acceptance itself. Coding CLI usage is separate. Live mode must refuse before ledger/auth/model use unless an ignored supervisor review file binds the current implementation commit; offline/preflight mode must not require or create a live ledger. Do not manufacture that review file. Preparation ending with US009 false is expected, not a failed story."
-try: result=subprocess.run(['/home/starquake/.kimi-code/bin/kimi','-p',prompt],timeout=(7200 if sid in {'US-008', 'US-009'} else 3600))
+try: result=subprocess.run([str(Path.home() / '.kimi-code/bin/kimi'),'-p',prompt],timeout=(7200 if sid in {'US-008', 'US-009'} else 3600))
 except subprocess.TimeoutExpired:
  failures=(old.get('failures',0) if old.get('story')==sid else 0)+1
  state.write_text(json.dumps(dict(story=sid,failures=failures,updated=time.time(),reason='programming_timeout')))

@@ -32,11 +32,12 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
-from research.contracts.budget import BudgetError, BudgetLedger
+from research.contracts.budget import BudgetError, BudgetLedger, BudgetLimits
 from research.contracts.persist import atomic_write_json
 from research.evaluator.service import EvaluatorError, EvaluatorRegistry
 from research.search import acceptance_config as ac
 from research.search.acceptance_config import (
+    RoundAuthorizationRefused,
     RunnerReviewRefused,
     check_runner_review,
 )
@@ -46,7 +47,13 @@ from research.search.acceptance_inner import (
     config_identity_hash,
     load_sandbox_api_key,
 )
-from research.search.run_index import RunIdentity, RunIndex, RunIndexError, RunRecord
+from research.search.run_index import (
+    MIN_MAIN_CANDIDATES,
+    RunIdentity,
+    RunIndex,
+    RunIndexError,
+    RunRecord,
+)
 from research.search.search_vector import RETAINED_DIMS, decode_retained, safety_gate
 
 SUMMARY_SCHEMA = "us009-acceptance-summary.v1"
@@ -105,6 +112,7 @@ def check_validation_configs(repo_root: Path) -> Mapping[str, Any]:
         "prompt_memory_enabled": need(solver.get("experience", {}).get("prompt_memory", {}), "enabled"),
         "stream": need(params, "stream"),
         "max_output_tokens": need(params, "max_tokens"),
+        "reasoning_effort": need(params, "reasoning_effort"),
     })
     if type(solver.get("max_llm_call_retries")) is not int or solver["max_llm_call_retries"] != 1:
         raise AcceptanceError("operator_generation_attempts_must_be_one")
@@ -542,7 +550,7 @@ def _record_from_result(
         ),
         status=status,
         score=None if score is None else float(score),
-        run_dir=str(Path(spec.run_dir).relative_to(Path(ac.RUNTIME_DIR))),
+        run_dir=str(Path(spec.run_dir).relative_to(Path(spec.runtime_dir))),
         run_result_sha256=run_result_sha256,
         journal_sha256=str(result.get("journal_sha256") or ""),
         request_trace_sha256=str(result.get("request_trace_sha256") or ""),
@@ -561,6 +569,74 @@ def _record_from_result(
     )
 
 
+def _prior_round_committed(repo_root: Path) -> dict[str, int]:
+    """Committed totals of the ORIGINAL (immutable) round-1 ledger, for
+    aggregate prior+new cost reporting in authorized retry rounds.
+
+    Read-only by construction (plain file read, no ledger open): the original
+    bytes never change. A retry must account for the prior cost BEFORE
+    spending anything new, so unknown/unfinished prior usage (open
+    reservations) is a refusal, never silently dropped from the aggregate.
+    """
+    path = repo_root / ac.RUNTIME_DIR / ac.LEDGER_FILENAME
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise AcceptanceError("prior_round_ledger_unreadable") from exc
+    committed = data.get("committed") if isinstance(data, dict) else None
+    if not isinstance(committed, dict):
+        raise AcceptanceError("prior_round_ledger_malformed")
+    if data.get("stopped") is None:
+        # An active/nonterminal prior ledger can still spend; aggregate cost
+        # accounting requires a terminal, fully settled prior round.
+        raise AcceptanceError("prior_round_ledger_active")
+    reservations = data.get("reservations")
+    if not isinstance(reservations, list):
+        raise AcceptanceError("prior_round_ledger_malformed")
+    if reservations:
+        raise AcceptanceError("prior_round_open_reservations")
+    totals: dict[str, int] = {}
+    for key in ("requests", "tokens"):
+        value = committed.get(key)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise AcceptanceError("prior_round_ledger_malformed")
+        totals[key] = value
+    return totals
+
+
+def _check_remaining_main_budget(ledger_path: Path, upcoming_fresh_runs: int) -> None:
+    """Lower bound BEFORE starting any request of the next child run.
+
+    The minimum is MAIN generations only (3x2 per inner run, never lowered):
+    ``MIN_MAIN_CANDIDATES * upcoming_fresh_runs`` requests must remain, or
+    the acceptance stops with ``remaining_budget_insufficient`` instead of
+    wasting the remaining calls on a run that cannot complete."""
+    with BudgetLedger.open(ledger_path) as ledger:
+        snapshot = ledger.snapshot()
+    stopped = snapshot["stopped"]
+    if stopped is not None:
+        raise AcceptanceError(
+            f"acceptance_ledger_stopped:{stopped.get('reason')}"
+        )
+    needed = MIN_MAIN_CANDIDATES * upcoming_fresh_runs
+    remaining = snapshot["remaining"]["requests"]
+    if remaining < needed:
+        raise AcceptanceError(
+            f"remaining_budget_insufficient:need_main={needed},remaining={remaining}"
+        )
+
+
+def _limits_within_original_pins(limits: BudgetLimits) -> None:
+    """No caller may expand the original acceptance pins, for ANY round."""
+    pins = ac.acceptance_budget_limits()
+    if (
+        limits.max_tokens > pins.max_tokens
+        or limits.max_requests > pins.max_requests
+        or limits.max_elapsed_seconds > pins.max_elapsed_seconds
+    ):
+        raise AcceptanceError("budget_limits_exceed_acceptance_pins")
+
+
 def run_acceptance(
     repo_root: Path,
     runtime_dir: Path,
@@ -568,20 +644,48 @@ def run_acceptance(
     algo_factory: Callable[[], Any] | None = None,
     child_runner: Callable[..., dict[str, Any]] | None = None,
     summary_out: Path | None = None,
+    budget_limits: BudgetLimits | None = None,
+    round_id: str = ac.DEFAULT_ROUND_ID,
 ) -> dict[str, Any]:
     """The one bounded acceptance. Caller (live mode) has already passed the
     review gate; this function opens/creates the persistent ledger and never
-    resets it. The runtime directory is FIXED (the one acceptance location);
-    the preflight vector file is an optional cross-check only. Any failure
-    checkpoints and propagates (STOP semantics)."""
+    resets it. The runtime directory is FIXED (round1: the one acceptance
+    location; retry rounds: the derived directory of a supervisor-authorized
+    round identity — the authorization is verified HERE, before any new
+    ledger exists, never implicitly). The preflight vector file is an
+    optional cross-check only. Any failure checkpoints and propagates (STOP
+    semantics)."""
     repo_root = repo_root.resolve()
+    limits = budget_limits or ac.acceptance_budget_limits()
+    _limits_within_original_pins(limits)
     if not runtime_dir.is_absolute():
         runtime_dir = repo_root / runtime_dir
-    expected_runtime = (repo_root / ac.RUNTIME_DIR).resolve()
-    if runtime_dir.resolve() != expected_runtime:
-        # The one fixed acceptance ledger/run location; alternate locations
-        # would create a fresh budget.
+    expected_runtime = repo_root / ac.round_runtime_dir(round_id)
+    if Path(os.path.abspath(runtime_dir)) != Path(os.path.abspath(expected_runtime)):
+        # The one fixed acceptance ledger/run location (or the derived
+        # authorized round location); alternates would create a fresh budget.
         raise AcceptanceError("acceptance_runtime_dir_fixed")
+    runtime_dir = Path(os.path.abspath(runtime_dir))
+    if runtime_dir.resolve() != runtime_dir:
+        # A symlinked/aliased runtime could silently modify the immutable
+        # original tree; refuse before touching it.
+        raise AcceptanceError("acceptance_runtime_dir_symlink")
+    if round_id != ac.DEFAULT_ROUND_ID:
+        # A retry round runs ONLY under the supervisor-written authorization
+        # bound to this commit and this exact round identity; caps come from
+        # the authorization and can never exceed the original pins.
+        auth_round, auth_limits = ac.check_round_authorization(repo_root)
+        if auth_round != round_id:
+            raise AcceptanceError("round_authorization_round_mismatch")
+        _limits_within_original_pins(auth_limits)
+        if budget_limits is not None and budget_limits != auth_limits:
+            raise AcceptanceError("round_authorization_caps_mismatch")
+        limits = auth_limits
+        # The prior (immutable) cost must be fully accounted BEFORE anything
+        # new is spent; missing or unresolved prior usage is a refusal.
+        prior_committed = _prior_round_committed(repo_root)
+    else:
+        prior_committed = None
     runtime_dir.mkdir(parents=True, exist_ok=True)
     runs_dir = runtime_dir / "runs"
     runs_dir.mkdir(parents=True, exist_ok=True)
@@ -590,10 +694,19 @@ def run_acceptance(
     child_runner = child_runner or _default_child_runner
     runner_commit = ac.git_head_commit(repo_root)
 
+    with BudgetLedger.open(ledger_path, limits=limits) as ledger:
+        start_snapshot = ledger.snapshot()
+    if start_snapshot["stopped"] is not None:
+        # Default live mode must REFUSE the old stopped ledger (no
+        # resume/reset). This refusal happens BEFORE the checkpointing
+        # block, so prior checkpoint/evidence bytes stay untouched.
+        raise AcceptanceError(
+            f"acceptance_ledger_stopped:{start_snapshot['stopped'].get('reason')}"
+        )
+
     records: list[RunRecord] = []
+    job_counts_by_run: dict[str, Any] = {}
     try:
-        with BudgetLedger.open(ledger_path, limits=ac.acceptance_budget_limits()) as ledger:
-            start_snapshot = ledger.snapshot()
         # Native derivation is the source of truth; the recorded preflight
         # file is only an optional cross-check.
         algo = algo_factory()
@@ -623,6 +736,8 @@ def run_acceptance(
                 decoded=decoded,
                 ledger_path=ledger_rel,
                 runner_commit=runner_commit,
+                runtime_dir=runtime_dir.relative_to(repo_root).as_posix(),
+                future_main_requests=MIN_MAIN_CANDIDATES * (ac.POP_SIZE - position - 1),
             )
             spec.validate()
             actual_run_dir = runtime_dir / "runs" / run_id
@@ -641,6 +756,7 @@ def run_acceptance(
             returned = {k: v for k, v in result.items() if k != "_run_result_sha256"}
             if persisted != returned:
                 raise AcceptanceError("inner_run_result_diverged")
+            job_counts_by_run[run_id] = persisted.get("job_counts") or {}
             record = _record_from_result(
                 result,
                 spec,
@@ -652,6 +768,7 @@ def run_acceptance(
             return record
 
         # 1) standalone inner run on the first decoded config.
+        _check_remaining_main_budget(ledger_path, ac.POP_SIZE)
         standalone = run_one(0)
         records.append(standalone)
         if standalone.status != "completed":
@@ -702,8 +819,14 @@ def run_acceptance(
                     "verified_committed_after": cache_after["committed"],
                 })
             else:
+                _check_remaining_main_budget(ledger_path, ac.POP_SIZE - position)
                 record = run_one(position)
                 records.append(record)
+                if record.status != "completed":
+                    # A failed child run can never form an accepted outer
+                    # tell: stop BEFORE launching the remaining child runs
+                    # (the checkpoint preserves the incomplete state).
+                    raise AcceptanceError(f"outer_run_incomplete:cfg{position}")
             accuracy = record.score if record.status == "completed" else None
             fitness.append(-accuracy if accuracy is not None else 0.0)
         outer.tell(fitness)
@@ -732,15 +855,22 @@ def run_acceptance(
             and coverage["crossover"] >= 1
             else "incomplete"
         )
+        jobs_total: dict[str, int] = {}
+        for counts in job_counts_by_run.values():
+            if isinstance(counts, Mapping):
+                for key, value in counts.items():
+                    if isinstance(value, int) and not isinstance(value, bool):
+                        jobs_total[key] = jobs_total.get(key, 0) + value
         summary = {
             "schema": SUMMARY_SCHEMA,
             "verdict": verdict,
             "runner_commit": runner_commit,
+            "round_id": round_id,
             "budget": {
                 "limits": {
-                    "max_tokens": ac.acceptance_budget_limits().max_tokens,
-                    "max_requests": ac.acceptance_budget_limits().max_requests,
-                    "max_elapsed_seconds": ac.acceptance_budget_limits().max_elapsed_seconds,
+                    "max_tokens": limits.max_tokens,
+                    "max_requests": limits.max_requests,
+                    "max_elapsed_seconds": limits.max_elapsed_seconds,
                 },
                 "started_at": start_snapshot["started_at"],
                 "start_committed": start_snapshot["committed"],
@@ -765,17 +895,45 @@ def run_acceptance(
                     "metric": ac.METRIC,
                     "metric_direction": "maximize",
                     "job_ids": sorted(record.job_ids),
+                    "job_counts": job_counts_by_run.get(f"cfg{run_position}", {}),
                     "operator_counts": dict(record.operator_counts),
                     "worker_cleanup_verified": record.worker_cleanup_verified,
                     "termination": record.termination,
                 }
-                for record in records
+                for run_position, record in enumerate(records)
             ],
+            "jobs_total": jobs_total,
             "cache_events": cache_events,
-            "inner_evaluations": {"requested": 1 + ac.POP_SIZE, "fresh": len(records), "cached": len(cache_events)},
+            # "fresh" child invocations are NOT model-active or completed
+            # runs: the three are counted separately.
+            "inner_evaluations": {
+                "requested": 1 + ac.POP_SIZE,
+                "fresh_child_invocations": len(records),
+                "model_active_runs": sum(
+                    1 for record in records
+                    if sum(int(v) for v in record.operator_counts.values()) > 0
+                ),
+                "completed_runs": sum(
+                    1 for record in records if record.status == "completed"
+                ),
+                "cached": len(cache_events),
+            },
             "operator_coverage": coverage,
             "no_superiority_claim": True,
         }
+        if round_id != ac.DEFAULT_ROUND_ID:
+            # Aggregate prior+new cost is preserved across authorized rounds;
+            # the original ledger stays the immutable prior-cost source (it
+            # was validated before any new request was allowed).
+            assert prior_committed is not None
+            summary["aggregate_cost"] = {
+                "prior_round_committed": prior_committed,
+                "this_round_committed": end_snapshot["committed"],
+                "total_committed": {
+                    "requests": prior_committed["requests"] + end_snapshot["committed"]["requests"],
+                    "tokens": prior_committed["tokens"] + end_snapshot["committed"]["tokens"],
+                },
+            }
         atomic_write_json(runtime_dir / ac.SUMMARY_FILENAME, summary)
         if summary_out is not None:
             atomic_write_json(summary_out, summary)
@@ -800,27 +958,67 @@ def run_acceptance(
                 emergency_cleanup.append({"run_dir": cleanup_file.parent.name,
                                           "cleanup_verified": False,
                                           "reason": "cleanup_evidence_unreadable"})
-        atomic_write_json(runtime_dir / ac.CHECKPOINT_FILENAME, {
+        checkpoint: dict[str, Any] = {
             "schema": "us009-acceptance-checkpoint.v1",
             "reason": f"{type(exc).__name__}: {exc}",
-            "completed_runs": [r.identity.to_dict() for r in records],
+            "runs": [
+                {"identity": r.identity.to_dict(), "status": r.status}
+                for r in records
+            ],
+            # Failed records are never presented as completed runs.
+            "completed_runs": [
+                r.identity.to_dict() for r in records if r.status == "completed"
+            ],
             "emergency_cleanup": emergency_cleanup,
             "budget": snapshot,
             "checkpointed_at": time.time(),
-        })
+        }
+        if round_id != ac.DEFAULT_ROUND_ID and prior_committed is not None:
+            # Preserve prior+new KNOWN committed cost (and any unresolved new
+            # reservations) on failure too — unknown cost is never coerced
+            # to zero.
+            aggregate: dict[str, Any] = {"prior_round_committed": prior_committed}
+            if isinstance(snapshot, dict) and isinstance(snapshot.get("committed"), dict):
+                aggregate["this_round_committed"] = snapshot["committed"]
+                aggregate["this_round_open_reservations"] = snapshot.get("open_reservations")
+                aggregate["total_committed"] = {
+                    "requests": prior_committed["requests"] + snapshot["committed"]["requests"],
+                    "tokens": prior_committed["tokens"] + snapshot["committed"]["tokens"],
+                }
+            else:
+                aggregate["this_round_unavailable"] = True
+            checkpoint["aggregate_cost"] = aggregate
+        atomic_write_json(runtime_dir / ac.CHECKPOINT_FILENAME, checkpoint)
         raise
 
 
 def live(repo_root: Path, *, summary_out: Path | None = None) -> int:
-    """Live entrypoint: review gate FIRST, then offline checks, then the run."""
+    """Live entrypoint: review gate FIRST, then offline checks, then the run.
+
+    Without a supervisor-written round authorization the target is always the
+    one fixed default location (which refuses the old stopped ledger). With a
+    valid authorization bound to this commit, the derived retry-round
+    directory and its exact caps are used instead — never an automatic new
+    budget."""
     check_runner_review(repo_root)
+    round_auth = ac.round_authorization_if_present(repo_root)
     checks = run_preflight_checks(repo_root, include_ledger_absence=False)
     failed = {name: c["reason"] for name, c in checks.items() if not c["ok"]}
     if failed:
         print(json.dumps({"refused": "preflight_failed", "failed": failed}, sort_keys=True))
         return 2
     try:
-        summary = run_acceptance(repo_root, ac.RUNTIME_DIR, summary_out=summary_out)
+        if round_auth is None:
+            summary = run_acceptance(repo_root, ac.RUNTIME_DIR, summary_out=summary_out)
+        else:
+            round_id, round_limits = round_auth
+            summary = run_acceptance(
+                repo_root,
+                ac.round_runtime_dir(round_id),
+                summary_out=summary_out,
+                budget_limits=round_limits,
+                round_id=round_id,
+            )
     except (AcceptanceError, BudgetError, RunIndexError) as exc:
         print(json.dumps({"stopped": f"{type(exc).__name__}: {exc}"}, sort_keys=True))
         return 2
@@ -844,7 +1042,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return preflight(repo_root, output=args.output)
         if args.command == "live":
             return live(repo_root, summary_out=args.summary_out)
-    except RunnerReviewRefused as exc:
+    except (RunnerReviewRefused, RoundAuthorizationRefused) as exc:
         print(json.dumps({"refused": str(exc)}, sort_keys=True))
         return 2
     return 2

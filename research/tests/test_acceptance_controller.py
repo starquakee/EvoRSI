@@ -289,7 +289,10 @@ def test_result_divergence_between_return_and_file_fails(tmp_path, monkeypatch):
         )
 
 
-def test_failed_outer_evaluation_maps_to_worst_fitness(tmp_path, monkeypatch):
+def test_failed_outer_run_stops_before_remaining_children_and_tell(tmp_path, monkeypatch):
+    """A failed child run must stop the outer orchestration BEFORE launching
+    the remaining child runs and BEFORE any tell: failure penalties can never
+    form an accepted outer evaluation, and the incomplete state checkpoints."""
     repo, runtime = _repo(tmp_path, monkeypatch)
     algos = []
 
@@ -300,15 +303,18 @@ def test_failed_outer_evaluation_maps_to_worst_fitness(tmp_path, monkeypatch):
 
     calls: list = []
     behaviors = {"cfg2": {"status": "failed"}}
-    summary = run_acceptance(
-        repo, runtime,
-        algo_factory=algo_factory,
-        child_runner=_fake_child(runtime, calls, behaviors=behaviors),
-    )
-    assert algos[1].told == [-0.5, -0.6, 0.0, -0.8]  # failed -> accuracy 0.0
-    assert len(RunIndex(runtime / "run-index.json")) == 3  # failed not indexed
-    assert summary["runs"][2]["status"] == "failed"
-    assert summary["verdict"] != "complete"  # a failed run blocks completion
+    with pytest.raises(AcceptanceError, match="outer_run_incomplete:cfg2"):
+        run_acceptance(
+            repo, runtime,
+            algo_factory=algo_factory,
+            child_runner=_fake_child(runtime, calls, behaviors=behaviors),
+        )
+    assert calls == ["cfg0", "cfg1", "cfg2"]  # cfg3 was never launched
+    assert algos[1].told is None  # no tell with fabricated failure penalties
+    assert len(RunIndex(runtime / "run-index.json")) == 2  # failed not indexed
+    assert not (runtime / "acceptance-summary.json").exists()
+    checkpoint = json.loads((runtime / "acceptance-checkpoint.json").read_text())
+    assert "outer_run_incomplete" in checkpoint["reason"]
 
 
 def test_missing_improve_crossover_marks_incomplete(tmp_path, monkeypatch):
@@ -334,15 +340,16 @@ def test_stopped_ledger_checkpoints_and_propagates(tmp_path, monkeypatch):
     ) as ledger:
         ledger.stop("budget_exhausted_elsewhere")
     calls: list = []
-    with pytest.raises(LedgerStopped):
+    # The old stopped ledger is refused BEFORE any child invocation, and the
+    # refusal must NOT overwrite prior checkpoint/evidence state.
+    with pytest.raises(AcceptanceError, match="acceptance_ledger_stopped"):
         run_acceptance(
             repo, runtime,
             algo_factory=lambda: FakeAlgo(VECTORS),
             child_runner=_fake_child(runtime, calls),
         )
-    checkpoint = json.loads((runtime / "acceptance-checkpoint.json").read_text())
-    assert "LedgerStopped" in checkpoint["reason"]
-    assert checkpoint["budget"]["stopped"]["reason"] == "budget_exhausted_elsewhere"
+    assert calls == []
+    assert not (runtime / "acceptance-checkpoint.json").exists()
     with BudgetLedger.open(runtime / ac.LEDGER_FILENAME) as ledger:
         assert ledger.snapshot()["stopped"]["reason"] == "budget_exhausted_elsewhere"
 

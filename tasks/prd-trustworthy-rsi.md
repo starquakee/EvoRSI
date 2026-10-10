@@ -4,11 +4,11 @@
 Implement the user-approved 2026-10-07 first-round plan. Current infrastructure works but prior 8-D experiment ran only draft/debug. Goal is a reproducible loop, not a performance claim.
 
 ## References
-Read AGENTS.md, HANDOFF.md, RUNBOOK.md and source entrypoints. Historical docs may be stale; actual inspect/trace wins. Original experiments live /home/starquake/rsi-gpu/formal_baseline. Windows legacy stack is rollback only.
+Read AGENTS.md, HANDOFF.md, RUNBOOK.md and source entrypoints. Historical docs may be stale; actual inspect/trace wins. Original experiments live <user-home>/rsi-gpu/formal_baseline. Windows legacy stack is rollback only.
 
 ## Decisions
-- Sole new source root /home/starquake/openrsi-local/OpenRSI; existing Windows live stack and original rsi-gpu environments/results untouched.
-- WSL Kimi CLI /home/starquake/.kimi-code/bin/kimi; fresh turn per story, 3-iteration supervised batches, no unsafe flags.
+- Sole new source root <user-home>/openrsi-local/OpenRSI; existing Windows live stack and original rsi-gpu environments/results untouched.
+- WSL Kimi CLI <user-home>/.kimi-code/bin/kimi; fresh turn per story, 3-iteration supervised batches, no unsafe flags.
 - Local Git commits only, no pushes/remotes. No secrets/runtime/private artifacts in Git.
 - Real evaluation budget 200000 total tokens,30 model requests,5400s, whichever first; programming agent usage separate.
 - Candidate code NEVER executes on development host; no secrets on candidate worker; independent evaluator and admission policy immutable to optimizer.
@@ -43,7 +43,7 @@ Kimi print mode is not OS sandbox. Do not use unsafe flags. Stop on auth failure
 - [ ] Provide a reproducible secret/path audit and provenance manifest; git diff --check and focused import/type checks pass.
 
 ### US-002: 旧实验独立审计
-- [ ] Read original /home/starquake/rsi-gpu/formal_baseline read-only; generate separate report without rewriting old records.
+- [ ] Read original <user-home>/rsi-gpu/formal_baseline read-only; generate separate report without rewriting old records.
 - [ ] Verify 60 records,46 unique configs,14 cached,44 actual Evo runs,2 pre-run rejects; all actual operators are draft=44/debug=15; no improve/crossover.
 - [ ] Uncached recorded tokens=930962 and execution wall sum=15345.9 seconds; all-row tokens=1315148 is duplicate-inclusive, not cost. Distinguish score counts and cached results.
 - [ ] Meaningful tests for cached/failed records and missing fields; provide executable audit command, typecheck, tests and git diff --check.

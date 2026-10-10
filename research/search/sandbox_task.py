@@ -75,6 +75,24 @@ def _truncate(text: Any) -> str:
     return value if len(value) <= _FEEDBACK_LIMIT else value[:_FEEDBACK_LIMIT] + "..."
 
 
+def _summarize_run_log(log: str | None, limit: int = 300) -> str:
+    """One bounded, meaningful line from the canonical run_log (the actual
+    execution error, not a fabricated reason)."""
+    if not log:
+        return ""
+    lines = [line.strip() for line in log.splitlines() if line.strip()]
+    if not lines:
+        return ""
+    import re
+
+    summary = lines[-1]
+    for line in reversed(lines):
+        if re.search(r"(?i)error|exception|traceback", line):
+            summary = line
+            break
+    return summary[:limit]
+
+
 def _submitted_bytes(source: str) -> bytes:
     """Exactly the encoding the API gates/writes (utf-8, surrogatepass)."""
     return source.encode("utf-8", errors="surrogatepass")
@@ -153,15 +171,19 @@ class SandboxAcceptanceTask:
         )
 
     def _failure(self, aux_status: str, feedback: str, exec_time: float,
-                 *, timed_out: bool = False) -> dict[str, Any]:
+                 *, timed_out: bool = False,
+                 job_id: str | None = None) -> dict[str, Any]:
+        aux: dict[str, Any] = {
+            "status": aux_status,
+            "status_code": 500,
+            "feedback": _truncate(feedback),
+        }
+        if job_id:
+            aux["job_id"] = job_id
         return {
             EXECUTION_OUTPUT: self._exec_result(feedback, exec_time, 1, timed_out),
             VALIDATION_FITNESS: None,
-            AUX_EVAL_INFO: {
-                "status": aux_status,
-                "status_code": 500,
-                "feedback": _truncate(feedback),
-            },
+            AUX_EVAL_INFO: aux,
             VALID_SOLUTION: False,
             VALID_SOLUTION_FEEDBACK: _truncate(feedback),
         }
@@ -233,13 +255,24 @@ class SandboxAcceptanceTask:
         return None
 
     # ------------------------------------------------------------ dojo API
-    def step_task(self, state: dict, code: Any) -> tuple[dict, dict[str, Any]]:
+    def step_task(self, state: dict, code: Any,
+                  generation_feedback: str | None = None) -> tuple[dict, dict[str, Any]]:
         """Submit candidate code to the isolated sandbox and translate ONLY
-        validated canonical evaluator evidence into an eval_result."""
+        validated canonical evaluator evidence into an eval_result.
+
+        ``generation_feedback`` (acceptance runner) carries the precise
+        generation-outcome classification for empty extractions, so debug
+        receives the actual cause (truncation, unclosed fence, invalid
+        Python) instead of an unexplained ``empty_candidate_code``."""
         self._token.check()
         started = time.monotonic()
         if not isinstance(code, str) or not code.strip():
-            return state, self._failure(STATUS_INVALID, "empty_candidate_code", 0.0)
+            reason = (
+                f"empty_candidate_code:{generation_feedback}"
+                if generation_feedback
+                else "empty_candidate_code"
+            )
+            return state, self._failure(STATUS_INVALID, reason, 0.0)
         try:
             result = self._client.submit_and_wait(
                 code,
@@ -307,13 +340,32 @@ class SandboxAcceptanceTask:
                 raw, body, evaluation, source, score_value
             )
         scored = mismatch is None and result.status == "completed" and score_value is not None
+        scoring_result = body.get("result")
+        execution_error = ""
+        if not scored and result.status == "failed":
+            # Retain the ACTUAL bounded execution error from the canonical
+            # run_log — inline when the controller persisted it in the result
+            # body, otherwise fetched (bounded + credential-redacted) from
+            # the canonical logs endpoint. Never a fabricated reason.
+            log_text = body.get("run_log")
+            if not isinstance(log_text, str) or not log_text:
+                fetch_log = getattr(self._client, "fetch_job_log", None)
+                log_text = fetch_log(result.job_id) if callable(fetch_log) else None
+            execution_error = _summarize_run_log(log_text)
         evidence = {
             "job_id": result.job_id,
             "status": result.status,
             "score": score_value if scored else None,
-            "scoring_result": body.get("result"),
+            "scoring_result": scoring_result,
+            "reason": scoring_result,
             "evidence_verified": scored,
             "evidence_mismatch": mismatch,
+            "source_identity_verified": body.get("source_identity_verified") is True,
+            "worker_cleanup_verified": body.get("worker_cleanup_verified") is True,
+            "completed_at_proven": bool(
+                isinstance(raw.get("completed_at"), str) and raw.get("completed_at")
+            ),
+            "execution_error": execution_error,
             "evaluation": {
                 key: evaluation.get(key)
                 for key in (
@@ -357,12 +409,14 @@ class SandboxAcceptanceTask:
             feedback = "timeout"
         elif result.status == "failed":
             aux_status = STATUS_FAILED
-            feedback = f"failed: {body.get('error') or ''}"
+            detail = execution_error or body.get("error") or ""
+            feedback = f"failed:{scoring_result or 'error'}: {detail}"
         else:
             aux_status = STATUS_UNKNOWN
             feedback = f"untrusted outcome: {result.status}"
         return self._failure(aux_status, feedback, exec_time,
-                             timed_out=aux_status == STATUS_TIMEOUT)
+                             timed_out=aux_status == STATUS_TIMEOUT,
+                             job_id=result.job_id)
 
     def cancel_all_live(self) -> list[dict[str, Any]]:
         """Best-effort cancel of every registered live job (never raises)."""

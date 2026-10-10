@@ -286,7 +286,13 @@ def test_summary_records_verified_zero_incremental_cache_cost(tmp_path, monkeypa
     repo, runtime = _repo(tmp_path, monkeypatch)
     summary = ap.run_acceptance(repo, runtime, algo_factory=lambda: FakeAlgo(VECTORS),
         child_runner=_fake_child(runtime, []))
-    assert summary['inner_evaluations'] == {'requested': 5, 'fresh': 4, 'cached': 1}
+    assert summary['inner_evaluations'] == {
+        'requested': 5,
+        'fresh_child_invocations': 4,
+        'model_active_runs': 4,
+        'completed_runs': 4,
+        'cached': 1,
+    }
     assert len(summary['cache_events']) == 1
     hit = summary['cache_events'][0]
     assert hit['outer_position'] == 0

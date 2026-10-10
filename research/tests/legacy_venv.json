@@ -1,0 +1,4 @@
+{
+  "python": "<legacy-root>/.venv/bin/python",
+  "note": "pre-existing legacy GPU venv; READ-ONLY, reused for integration tests that need vendored istratde/jax"
+}

@@ -116,8 +116,9 @@ docker compose down        # 只停新栈；不要加 -v，postgres 数据卷保
 ## 限制
 
 - edge 网络有出网能力，但只有 nginx 在其上；worker/DB/Redis 全在 internal 网络。
-- 真实模型调用尚未接入（US-009）；worker 无网络，requirements 安装会失败
-  （fail closed，符合预期）。
+- US-009 第二轮真实模型小额验收已完成，证据见
+  `reports/us009-round2-acceptance.json`；这不证明算法优越性。worker 无网络，
+  requirements 安装会失败（fail closed，符合预期）。
 - worker 健康检查端点 `/healthz` 无需认证（只返回 ok/cleanup_unproven，
   不暴露任何控制面）。
 

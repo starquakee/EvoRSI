@@ -5,7 +5,11 @@ path and hash recorded in research/provenance/manifest.json).
 Consolidated under research/adapters for US-001; US-004 repair replaced the
 local legacy marker list with the SAME versioned policy engine used by the
 sandbox API admission and the Evo clients (research.contracts.source_gate).
-Credentials are read from the environment only (SANDBOX_ENDPOINT / SANDBOX_API_KEY).
+US-010: the endpoint defaults to the verified isolated rsi-trustworthy stack
+(research.adapters.endpoints.DEFAULT_ENDPOINT, 127.0.0.1:6581); the legacy
+6580 stack is reachable only via an explicit argument or SANDBOX_ENDPOINT.
+The API key is never defaulted: SANDBOX_API_KEY (or an explicit argument)
+stays mandatory.
 
 US-007 repair: remote-job cancellation. The legacy client raised TimeoutError
 on a wait timeout WITHOUT cancelling the remote job, leaving sandbox work
@@ -20,6 +24,11 @@ raise; failures are captured into the evidence dict.
 NOTE: the source gate is a pre-execution keyword/policy filter, not a
 security boundary. Real isolation is enforced by the sandbox worker, not by
 this filter. A missing/unreadable policy fails closed (deny).
+
+US-010 defaults target the isolated rsi-trustworthy stack: the default
+data_dir is the new stack's public mount /mnt/rsi_data/hello_synth (the
+legacy /mnt/pubdatasets2/... path only exists on the rollback 6580 stack;
+pass it explicitly together with an explicit endpoint when rolling back).
 """
 from __future__ import annotations
 
@@ -33,6 +42,7 @@ from typing import Any
 
 import httpx
 
+from research.adapters.endpoints import resolve_endpoint
 from research.contracts.budget import BudgetError, CancellationToken
 from research.contracts.sandbox_lifecycle import cleanup_confirmed
 
@@ -145,12 +155,15 @@ class SandboxEvalClient:
         endpoint: str | None,
         api_key: str | None,
     ) -> tuple[str | None, str | None]:
-        resolved_endpoint = (
+        raw_endpoint = (
             endpoint
             or self._endpoint
             or self._resolved_endpoint
             or os.environ.get("SANDBOX_ENDPOINT")
         )
+        # resolve_endpoint validates and falls back to the verified 6581
+        # default; the legacy 6580 stack requires an explicit value above.
+        resolved_endpoint = resolve_endpoint(raw_endpoint)
         resolved_api_key = (
             api_key
             or self._api_key
@@ -167,13 +180,13 @@ class SandboxEvalClient:
         endpoint: str | None = None,
         api_key: str | None = None,
         name: str = "rsi-de-hello-synth",
-        data_dir: str = "/mnt/pubdatasets2/tasks/hello_synth",
+        data_dir: str = "/mnt/rsi_data/hello_synth",
         resource_type: str = "gpu",
         gpu_count: int = 1,
         timeout: int = 300,
         poll_interval: float = 2.0,
         cancellation_token: CancellationToken | None = None,
-        task_id: str | None = None,
+        task_id: str | None = "hello_synth",
     ) -> SandboxResult:
         ok, reason = safety_gate_source(source)
         if not ok:
@@ -343,6 +356,30 @@ class SandboxEvalClient:
                        for trace_id in unknown)
         return results
 
+    # ------------------------------------------------------------- logs
+    def fetch_job_log(self, job_id: str, *, max_chars: int = 4000) -> str | None:
+        """Bounded, credential-redacted canonical run_log for failure evidence.
+
+        Best-effort and never raises: a missing/unreadable log is None, not
+        an error. Only the bounded tail is returned and any occurrence of the
+        API key is redacted before the text leaves the client.
+        """
+        try:
+            endpoint, api_key = self._resolve_auth(None, None)
+            if endpoint is None or api_key is None or not job_id:
+                return None
+            headers = {"X-API-Key": api_key, "X-Trace-ID": uuid.uuid4().hex}
+            with httpx.Client(base_url=endpoint, timeout=30.0, trust_env=False) as client:
+                response = client.get(f"/api/v1/jobs/{job_id}/logs", headers=headers)
+                if response.status_code != 200:
+                    return None
+                text = response.text
+            if max_chars >= 0:
+                text = text[-max_chars:]
+            return text.replace(api_key, "[redacted]")
+        except Exception:
+            return None
+
 
 _DEFAULT_CLIENT = SandboxEvalClient()
 
@@ -353,11 +390,12 @@ def submit_and_wait(
     endpoint: str | None = None,
     api_key: str | None = None,
     name: str = "rsi-de-hello-synth",
-    data_dir: str = "/mnt/pubdatasets2/tasks/hello_synth",
+    data_dir: str = "/mnt/rsi_data/hello_synth",
     resource_type: str = "gpu",
     gpu_count: int = 1,
     timeout: int = 300,
     poll_interval: float = 2.0,
+    task_id: str | None = "hello_synth",
 ) -> SandboxResult:
     """Module-level convenience wrapper over the shared default client."""
     return _DEFAULT_CLIENT.submit_and_wait(
@@ -370,6 +408,7 @@ def submit_and_wait(
         gpu_count=gpu_count,
         timeout=timeout,
         poll_interval=poll_interval,
+        task_id=task_id,
     )
 
 

@@ -1,4 +1,8 @@
 # Credential-free profile. The controller supplies managed OAuth in memory.
+# Acceptance pins (US-009 repair): k3 with reasoning_effort=low (the official
+# docs pin low/high/max, default high; disabling thinking silently routes to
+# K2.8 and is forbidden) and an 8192 output cap — the 4096 cap truncated 9 of
+# 16 retained generations at finish_reason=length.
 _target_: litellm.Router
 _convert_: all
 model_list:
@@ -9,7 +13,8 @@ model_list:
       base_url: https://api.kimi.com/coding/v1
       temperature: 1.0
       top_p: 0.95
-      max_tokens: 4096
+      max_tokens: 8192
+      reasoning_effort: low
       timeout: 600
       num_retries: 0
       max_retries: 0

@@ -40,6 +40,7 @@ _ACCEPTED_KEYS = (
     "prompt_memory_enabled",
     "stream",
     "max_output_tokens",
+    "reasoning_effort",
 )
 
 _INT_DEFAULTS = {
@@ -50,7 +51,7 @@ _INT_DEFAULTS = {
     "num_generations_till_crossover": 1,
     "llm_concurrency": 1,
     "sandbox_concurrency": 1,
-    "max_output_tokens": 4096,
+    "max_output_tokens": 8192,
 }
 
 _BOOL_DEFAULTS = {
@@ -60,6 +61,11 @@ _BOOL_DEFAULTS = {
 }
 
 MAX_OUTPUT_TOKENS_LIMIT = 8192
+
+#: Managed k3 supports low/high/max (default high); disabling thinking
+#: silently routes to a different model (K2.8), so the acceptance pins the
+#: explicit low effort and never disables thinking.
+REASONING_EFFORT_PIN = "low"
 
 
 class ValidationConfigError(ValueError):
@@ -109,6 +115,11 @@ def validate_inner_evo_config(mapping: Mapping[str, Any]) -> None:
     experience_enabled = _bool_field(mapping, "experience_enabled")
     prompt_memory_enabled = _bool_field(mapping, "prompt_memory_enabled")
     stream_enabled = _bool_field(mapping, "stream")
+    reasoning_effort = mapping.get("reasoning_effort", REASONING_EFFORT_PIN)
+    if not isinstance(reasoning_effort, str) or reasoning_effort != REASONING_EFFORT_PIN:
+        # The acceptance pins reasoning_effort=low explicitly (k3 default is
+        # high; thinking must never be disabled — that routes to K2.8).
+        raise ValidationConfigError("reasoning_effort_must_be_low")
 
     if num_generations < 3:
         # Fewer than 3 inner generations cannot show a search trajectory.
@@ -175,7 +186,8 @@ class InnerEvoValidationConfig:
     experience_enabled: bool = True
     prompt_memory_enabled: bool = False
     stream_enabled: bool = True
-    max_output_tokens: int = 4096
+    max_output_tokens: int = 8192
+    reasoning_effort: str = REASONING_EFFORT_PIN
     estimated_input_tokens: int = 8000
     request_deadline_seconds: float = 600.0
 
@@ -195,6 +207,7 @@ class InnerEvoValidationConfig:
                 "prompt_memory_enabled": self.prompt_memory_enabled,
                 "stream": self.stream_enabled,
                 "max_output_tokens": self.max_output_tokens,
+                "reasoning_effort": self.reasoning_effort,
             }
         )
 

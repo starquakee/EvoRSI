@@ -9,9 +9,13 @@ deployment are never modified by this work.
 ## Layout
 
 - `adapters/` — fixed evaluation/safety contract between the optimizer and the
-  sandbox (`sandbox_eval_client`, `rsi_eval_adapter`, `safe_rsi_de_adapter`).
-  The optimizer must not modify these; the keyword gate in
+  sandbox (`sandbox_eval_client`, `rsi_eval_adapter`, `safe_rsi_de_adapter`,
+  `endpoints`). The optimizer must not modify these; the keyword gate in
   `sandbox_eval_client` is a pre-execution filter, NOT a security boundary.
+  `endpoints` (US-010) pins the sandbox routing default: the verified isolated
+  rsi-trustworthy stack `http://127.0.0.1:6581`; the legacy 6580 stack is an
+  explicit rollback only (`SANDBOX_ENDPOINT` or an explicit argument, never a
+  silent fallback).
 - `contracts/` — shared trustworthy-loop contracts (US-003): `results`
   (common result schema with explicit metric direction and fail-closed
   finalization), `cache` (deterministic scored-result cache; hits cost zero
@@ -141,6 +145,51 @@ print('vendored imports ok')"
 - Origins stay read-only; differing files are surfaced by
   `provenance/inventory-diff-wsl-vs-windows.json`, never synced blindly.
 
+### Sandbox endpoint default and rollback (US-010)
+
+All local research clients (`SandboxEvalClient`, `rsi_eval_adapter`,
+`experiments/submit_e2e.py`, `experiments/de_formal_baseline.py` and the
+US-009 acceptance runner) now default to the verified isolated
+rsi-trustworthy gateway `http://127.0.0.1:6581` (see
+`deploy/rsi-trustworthy/README.md`; acceptance evidence in
+`reports/us008-security-loop.json` and `reports/us009-round2-acceptance.json`).
+The legacy Windows-mounted stack `http://127.0.0.1:6580` stays running,
+untouched, as an explicit rollback only:
+
+```bash
+# default (isolated stack) — nothing to set
+export SANDBOX_API_KEY=<new-stack key from .runtime/rsi-trustworthy/auth.env>
+
+# explicit rollback to the legacy stack
+export SANDBOX_ENDPOINT=http://127.0.0.1:6580
+export SANDBOX_API_KEY=<legacy dev key>
+```
+
+Routing rules (`research/adapters/endpoints.py`, tests in
+`tests/test_endpoint_switch.py`): explicit argument > `SANDBOX_ENDPOINT` >
+6581 default; malformed endpoints fail closed; the API key is never
+defaulted. The default `data_dir` is the new stack's public mount
+`/mnt/rsi_data/hello_synth` (the legacy `/mnt/pubdatasets2/...` path exists
+only on the rollback stack). No legacy security behavior is restored by
+rolling back the endpoint: the source gate and budget contracts are
+unchanged client-side. The per-candidate and cross-job isolation checks in
+this project were verified on 6581; do not assume the legacy stack provides
+those same guarantees.
+
+Rollback changes routing, not task packaging. The old stack additionally
+needs its own data path and task identifier. For `submit_e2e.py`, explicitly
+set `SANDBOX_DATA_DIR=/mnt/pubdatasets2/tasks/hello_synth` and
+`SANDBOX_TASK_ID=hello_synth_e2e` alongside the legacy endpoint and key.
+The Python client and its convenience wrapper accept explicit `data_dir`
+and `task_id` arguments. Returning to the isolated defaults requires removing
+these overrides. The legacy Titanic script uses `SANDBOX_URL` rather than
+`SANDBOX_ENDPOINT` and refuses the synthetic-only default registry before
+launching Evo.
+
+US-010 verifies rollback routing and payload preservation offline and checks
+the old endpoint's reachability read-only. It does **not** run an additional
+candidate job on the old stack or claim a fresh end-to-end legacy evaluation.
+
 ### Search acceptance control (US-007)
 
 `research.search.run_control.run_guarded_search` installs guards on the real
@@ -167,9 +216,20 @@ not evidence of real-model operator coverage; US-009 still must prove it.
 Actual cancellation acknowledgements and filesystem isolation are gated by
 US-008. No real acceptance request was made during US-007.
 
-### Real acceptance runner (US-009, preparation)
+### Real acceptance runner (US-009)
 
-`research.search.acceptance` is the parent controller for the one bounded
+Status 2026-10-10: the one authorized second round completed and was
+independently accepted (24 requests / 49903 tokens / 676.8 s, four verified
+inner runs + native iStratDE ask/evaluate/tell; evidence
+`reports/us009-round2-acceptance.json`). Round 1 remains INCOMPLETE
+(`reports/us009-real-acceptance.json`). Aggregate real-model cost across
+both rounds: 41 requests / 131620 tokens. NO further real round is
+authorized; both runtime trees (`.runtime/acceptance-us009`,
+`.runtime/acceptance-us009-round2`) and their ledgers are immutable
+evidence. The live gate still binds the exact runner commit, so source
+changes after the acceptance intentionally make `live` refuse.
+
+`research.search.acceptance` is the parent controller for the bounded
 real acceptance; `research.search.acceptance_inner` is the per-config inner
 Evo child. Hard rules implemented by the runner:
 

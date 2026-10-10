@@ -1,0 +1,179 @@
+{
+  "schema": "us010-switch-handoff.v1",
+  "story": "US-010 切换、回退与交接",
+  "date": "2026-10-10",
+  "verdict": "pass",
+  "default_switch": {
+    "module": "research/adapters/endpoints.py",
+    "default_endpoint": "http://127.0.0.1:6581",
+    "legacy_rollback_endpoint": "http://127.0.0.1:6580",
+    "resolution_order": "explicit argument > SANDBOX_ENDPOINT > verified 6581 default; malformed endpoints fail closed (sandbox_endpoint_invalid:*); API key never defaulted",
+    "wired_clients": [
+      "research/adapters/sandbox_eval_client.py (endpoint default via resolve_endpoint; data_dir default /mnt/rsi_data/hello_synth; task_id default hello_synth)",
+      "research/experiments/submit_e2e.py (6581 default + new-stack payload: task_id=hello_synth, data_dir=/mnt/rsi_data/hello_synth)",
+      "research/experiments/de_formal_baseline.py (SANDBOX_URL default 6581 + honest guard: legacy titanic-extended@1 baseline refuses the synthetic-only 6581 registry before any Evo/LLM spend; explicit SANDBOX_URL=6580 rollback required)"
+    ],
+    "no_silent_legacy_fallback": true,
+    "cli_rollback_configuration": "submit_e2e.py accepts SANDBOX_ENDPOINT, SANDBOX_DATA_DIR and SANDBOX_TASK_ID; Python convenience wrapper accepts task_id and data_dir overrides"
+  },
+  "routing_evidence": {
+    "offline_tests": "research/tests/test_endpoint_switch.py (25), test_endpoint_payload_supervisor.py (3), test_acceptance_runtime_audit_supervisor.py (3), test_submit_e2e_routing.py (2); actual CLI payload and public-wrapper overrides covered",
+    "real_read_only": {
+      "default_resolution": "http://127.0.0.1:6581, authenticated GET /api/v1/jobs -> 200 (key from .runtime/rsi-trustworthy/auth.env, never printed)",
+      "rollback_resolution": "SANDBOX_ENDPOINT=http://127.0.0.1:6580 resolves to legacy stack; unauthenticated GET /api/v1/jobs -> 422 (reachable, auth enforced)"
+    },
+    "real_defaulted_client_job": {
+      "job_id": "job_1776de3689834492",
+      "description": "trusted fixed synthetic candidate (research/experiments/hello_synth_job.py) through SandboxEvalClient with ALL defaults (no SANDBOX_ENDPOINT), require_cleanup=True, NO LLM",
+      "status": "completed",
+      "score": 0.9,
+      "evaluation": "external_trusted accuracy maximize, test split, 40 rows, evaluator-registry.v1",
+      "source_identity_verified": true,
+      "worker_cleanup_verified": true,
+      "proof_file": ".runtime/us010-default-client-proof.json (gitignored runtime evidence)"
+    }
+  },
+  "docs_updated": [
+    "AGENTS.md (two-stack layout, new-stack start/stop/verify, old stack = explicit rollback, immutable acceptance evidence + budget cap)",
+    "HANDOFF.md (architecture, verified state, startup, next steps; stale 'not done' claims corrected)",
+    "RUNBOOK.md (new 0.0 current-state section with switch/rollback commands and current script paths; old sections labeled legacy history; stale safety-gap claim corrected)",
+    "research/README.md (endpoint default/rollback section; US-009 status update)",
+    "dependency restore: research/ENVIRONMENT.md + research/provenance/venv-*.freeze.txt (referenced; no global install/upgrade performed or claimed)"
+  ],
+  "sft_builder_integration": "OpenMLE-ERL/SFT external repository is absent; test_same_parquet_is_consumed_by_existing_sft_builder now skips with an explicit honest reason when the external builder is missing and runs unchanged when it exists. SFT was NOT validated here.",
+  "aggregate_validation": {
+    "research_tests": "905 passed, 0 failed (.venv-research, final supervisor suite)",
+    "evo_tests": "146 passed, 3 skipped (incl. honest SFT skip), 0 failed (OpenMLE-Evo/.venv); the former baseline failure is resolved by the conditional skip",
+    "mypy": "no issues in 96 owned research/experiment/test files; --follow-imports=silent with the existing seven-directory scope (vendor snapshots excluded)",
+    "secret_scan": "research/tools/audit_secrets.py AUDIT OK (0 findings, 0 host-path violations)",
+    "diff_check": "git diff --check clean",
+    "mounted_source_audit": "docker inspect: all rsi_* mounts resolve under <repo-root> (sources ro, scratch/storage rw); legacy sandbox_* containers still mount the Windows migration tree, untouched",
+    "ledger_audit": "research/tools/audit_acceptance_runtime.py AUDIT OK: 164 runtime evidence files hash-verified against reports/us009-real-acceptance.json + reports/us009-round2-acceptance.json; round1 17 req/81717 tok (stopped), round2 24 req/49903 tok; aggregate 41 req/131620 tok; both ledgers within pins, no unresolved reservations",
+    "stack_validation": "deploy/rsi-trustworthy/validate_stack.py VALIDATION PASSED (structure, isolation, auth, cleanup, all six legacy containers healthy, legacy gateway 6580 answers)",
+    "health": "12 containers up; rsi_worker healthy; ml-sandbox-gpu-0 healthy"
+  },
+  "immutability": "US-009 round1/round2 runtime trees and ledgers byte-identical (hash-verified by the audit); no new model requests, no ledger reset, no round3, no Docker restart/prune, old stack untouched",
+  "limitations": [
+    "the old live-review commit intentionally no longer matches HEAD, so the acceptance runner live mode refuses (prevents accidental additional model runs)",
+    "no fresh clean-machine dependency install was tested; restore docs reference existing freeze snapshots",
+    "MetaDE and multi-seed/control comparisons remain unimplemented (next-stage work, requires new explicit model-budget authorization)",
+    "legacy stack ports 6580/10150 still bind all interfaces (pre-existing, documented in AGENTS.md)",
+    "Legacy rollback was verified for configuration/payload preservation and read-only reachability; no additional end-to-end candidate evaluation ran on the legacy stack."
+  ],
+  "supervisor_final_review": {
+    "checked_at": 1791636834.1962335,
+    "implementation_base_commit": "732f481",
+    "focused_final_review": "30 routing/audit tests passed on732f481; two further CLI/public-wrapper failures reproduced and fixed; final research suite905passed",
+    "real_default_client": {
+      "checked_at": 1791635954.1953733,
+      "job_id": "job_f3b9fc8599f74d85",
+      "endpoint": "http://127.0.0.1:6581",
+      "status": "completed",
+      "score": 0.9,
+      "source_identity_verified": true,
+      "worker_cleanup_verified": true,
+      "evaluation": {
+        "score": 0.9,
+        "split": "test",
+        "metric": "accuracy",
+        "task_id": "hello_synth",
+        "direction": "maximize",
+        "evaluator": "external_trusted",
+        "row_count": 40,
+        "answer_sha256": "f25ab07cfc53a420662e3ef899df728de124136c70277b66236ca06f08638579",
+        "registry_version": "evaluator-registry.v1",
+        "prediction_sha256": "17e8913dd4f4987b6412c4c5e3ad173dbe9bba865379cc164cf1df288478b6ac",
+        "prediction_snapshot": "/mnt/rsi_storage/mlsandbox/jobs/2026-10-10/hello_synth/job_f3b9fc8599f74d85/prediction_snapshot.csv"
+      },
+      "source_gate": {
+        "allowed": true,
+        "denials": [],
+        "check_kind": "static_admission_filter",
+        "entrypoint": "main.py",
+        "policy_sha256": "967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e",
+        "source_sha256": "25a5a7b069e003e8fc23f1dea66e4e5b319aeaff05c4229272e52feeab10f94f",
+        "policy_version": "source-gate.v2",
+        "entrypoint_sha256": "d9c48c65c8ab13beef05a7a5953b79acb50059c45386f510f85781c1640fb159",
+        "security_boundary": false
+      },
+      "real_model_requests": 0,
+      "rollback_readonly_health_status": 200,
+      "both_ledgers_unchanged": true
+    },
+    "runtime_audit": {
+      "aggregate_committed": {
+        "requests": 41,
+        "tokens": 131620
+      },
+      "issues": [],
+      "rounds": [
+        {
+          "evidence_files_verified": 45,
+          "ledger": {
+            "committed_requests": 17,
+            "committed_tokens": 81717,
+            "path": ".runtime/acceptance-us009/budget-ledger.json",
+            "stopped": true
+          },
+          "round": "round1"
+        },
+        {
+          "evidence_files_verified": 119,
+          "ledger": {
+            "committed_requests": 24,
+            "committed_tokens": 49903,
+            "path": ".runtime/acceptance-us009-round2/budget-ledger.json",
+            "stopped": false
+          },
+          "round": "round2"
+        }
+      ],
+      "verdict": "AUDIT OK"
+    },
+    "boundary_issues": [],
+    "health": [
+      {
+        "name": "sandbox_api",
+        "status": "running",
+        "health": null
+      },
+      {
+        "name": "sandbox_dispatcher",
+        "status": "running",
+        "health": null
+      },
+      {
+        "name": "sandbox_nginx",
+        "status": "running",
+        "health": null
+      },
+      {
+        "name": "sandbox_postgres",
+        "status": "running",
+        "health": null
+      },
+      {
+        "name": "sandbox_redis",
+        "status": "running",
+        "health": null
+      },
+      {
+        "name": "ml-sandbox-gpu-0",
+        "status": "running",
+        "health": "healthy"
+      },
+      {
+        "name": "rsi_worker",
+        "status": "running",
+        "health": "healthy"
+      }
+    ],
+    "active_repo_auth_helpers": [],
+    "research_tests_passed": 905,
+    "evo_tests_passed": 146,
+    "evo_tests_skipped": 3,
+    "mypy_research_files_clean": 96,
+    "no_additional_model_calls": true,
+    "rollback_verification_scope": "Offline actual HTTP payload capture and read-only old endpoint health; no new old-stack candidate job."
+  }
+}

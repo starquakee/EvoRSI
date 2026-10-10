@@ -14,6 +14,8 @@ reviewing the committed runner; the runner never creates it.
 from __future__ import annotations
 
 import json
+import math
+import re
 import subprocess
 from pathlib import Path
 from typing import Any, Mapping
@@ -23,6 +25,18 @@ from research.contracts.budget import BudgetLimits
 # --- accepted review-file contract (live gate) ------------------------------
 RUNNER_REVIEW_SCHEMA = "us009-runner-review.v1"
 RUNNER_REVIEW_FILENAME = "us009-runner-review.json"
+
+# --- retry-round authorization (US-009 offline repair) -----------------------
+# The original .runtime/acceptance-us009 tree and its stopped ledger are
+# IMMUTABLE. A later retry round may only run when a supervisor-written
+# authorization file (ignored, never created by the runner) binds the new
+# implementation commit with a unique round identity and exact caps. Without
+# it, live mode always targets the one fixed default location and refuses a
+# stopped ledger. Nothing auto-creates a new directory or budget on failure.
+ROUND_AUTHORIZATION_SCHEMA = "us009-round-authorization.v1"
+ROUND_AUTHORIZATION_FILENAME = "us009-round-authorization.json"
+DEFAULT_ROUND_ID = "round1"
+_ROUND_ID_RE = re.compile(r"round(?:[2-9]|[1-9][0-9]+)")
 
 # --- runtime layout (all under ignored .runtime/, never committed) ----------
 RUNTIME_DIR = Path(".runtime") / "acceptance-us009"
@@ -96,6 +110,112 @@ def acceptance_budget_limits() -> BudgetLimits:
 
 class RunnerReviewRefused(RuntimeError):
     """Live mode is refused; the message IS the machine-readable rule."""
+
+
+class RoundAuthorizationRefused(RuntimeError):
+    """Retry-round activation is refused; the message is the rule."""
+
+
+def round_runtime_dir(round_id: str) -> Path:
+    """The derived runtime directory for a round identity.
+
+    ``round1`` is the one original fixed location; retry rounds live in a
+    deterministically derived sibling. Anything else (traversal, absolute,
+    unknown identity) is refused — a round id can never select an arbitrary
+    fresh location.
+    """
+    if round_id == DEFAULT_ROUND_ID:
+        return RUNTIME_DIR
+    if not isinstance(round_id, str) or not _ROUND_ID_RE.fullmatch(round_id):
+        raise RoundAuthorizationRefused("round_id_invalid")
+    return Path(".runtime") / f"acceptance-us009-{round_id}"
+
+
+def is_valid_round_runtime_dir(path: Path) -> bool:
+    """A spec/runtime path must be the default location or a well-formed
+    retry-round directory (never an arbitrary fresh runtime)."""
+    if path == RUNTIME_DIR:
+        return True
+    prefix = "acceptance-us009-"
+    return (
+        path.parent == Path(".runtime")
+        and path.name.startswith(prefix)
+        and _ROUND_ID_RE.fullmatch(path.name[len(prefix):]) is not None
+    )
+
+
+def _cap_int(value: Any, maximum: int, rule: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= maximum:
+        raise RoundAuthorizationRefused(rule)
+    return value
+
+
+def evaluate_round_authorization(
+    payload: Mapping[str, Any], *, head_commit: str
+) -> tuple[str, BudgetLimits]:
+    """Pure check of a parsed round authorization. Returns (round_id, caps).
+
+    Caps can only ever be TIGHTER than the original acceptance pins; a retry
+    round can never expand the budget, and the persisted-ledger rule
+    (limits_cannot_expand) additionally blocks expansion across restarts.
+    """
+    if not isinstance(payload, Mapping):
+        raise RoundAuthorizationRefused("round_authorization_not_an_object")
+    if payload.get("schema") != ROUND_AUTHORIZATION_SCHEMA:
+        raise RoundAuthorizationRefused("round_authorization_schema_mismatch")
+    commit = payload.get("implementation_commit")
+    if not isinstance(commit, str) or not commit or commit != head_commit:
+        raise RoundAuthorizationRefused("round_authorization_commit_mismatch")
+    if payload.get("authorize_retry_round") is not True:
+        raise RoundAuthorizationRefused("round_authorization_not_approved")
+    round_id = payload.get("round_id")
+    if not isinstance(round_id, str) or not _ROUND_ID_RE.fullmatch(round_id):
+        raise RoundAuthorizationRefused("round_id_invalid")
+    if round_id != "round2":
+        # Narrow contract for the single requested retry: only round2 may
+        # activate (later rounds need validated complete prior-round cost
+        # aggregation, which is intentionally not implemented).
+        raise RoundAuthorizationRefused("round_unsupported")
+    caps = payload.get("caps")
+    if not isinstance(caps, Mapping):
+        raise RoundAuthorizationRefused("round_authorization_caps_missing")
+    pins = acceptance_budget_limits()
+    max_tokens = _cap_int(caps.get("max_tokens"), pins.max_tokens,
+                          "round_authorization_tokens_exceed_pin")
+    max_requests = _cap_int(caps.get("max_requests"), pins.max_requests,
+                            "round_authorization_requests_exceed_pin")
+    elapsed = caps.get("max_elapsed_seconds")
+    if (
+        isinstance(elapsed, bool)
+        or not isinstance(elapsed, (int, float))
+        or not math.isfinite(float(elapsed))
+        or not 0 < float(elapsed) <= pins.max_elapsed_seconds
+    ):
+        raise RoundAuthorizationRefused("round_authorization_elapsed_exceeds_pin")
+    return round_id, BudgetLimits(
+        max_tokens=max_tokens,
+        max_requests=max_requests,
+        max_elapsed_seconds=float(elapsed),
+    )
+
+
+def check_round_authorization(repo_root: Path) -> tuple[str, BudgetLimits]:
+    """IO wrapper: load and validate the ignored round-authorization file."""
+    path = repo_root / ".runtime" / ROUND_AUTHORIZATION_FILENAME
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise RoundAuthorizationRefused("round_authorization_unavailable") from exc
+    return evaluate_round_authorization(payload, head_commit=git_head_commit(repo_root))
+
+
+def round_authorization_if_present(repo_root: Path) -> tuple[str, BudgetLimits] | None:
+    """None when no authorization file exists; invalid content is a refusal,
+    never a silent fall-back to an unauthorized round."""
+    path = repo_root / ".runtime" / ROUND_AUTHORIZATION_FILENAME
+    if not path.exists():
+        return None
+    return check_round_authorization(repo_root)
 
 
 def evaluate_runner_review(review: Mapping[str, Any], *, head_commit: str) -> None:
