@@ -48,6 +48,14 @@ deployment are never modified by this work.
   first-evaluation reuse), `sandbox_task` (production dojo `step_task` over
   the isolated sandbox client), `acceptance_inner` (Evo-venv child runner)
   and `acceptance` (legacy-venv parent controller with `preflight`/`live`).
+- `comparison/` — the approved 2026-10-10 iStratDE controlled pilot
+  comparison (EXP-001..EXP-008), a separate entry point from the US-009
+  acceptance stack: `protocol` (the frozen 27-cell protocol, pinned K3
+  model profile and budgets; any deviation raises a named
+  `ComparisonSpecError`), `specs` (typed cell/inner-run specs with
+  canonical sha256 identities and the method-independent inner-seed
+  derivation) and `cli` (prepare/preflight/run/resume/report surfaces that
+  refuse safely until implemented; no model calls, no ledger creation).
 - `vendor/` — upstream `istratde` and `metade` snapshots (`src/`,
   `pyproject.toml`, `LICENSE` (GPL-3.0), `README.md`). Origin URLs/commits in
   `vendor/PROVENANCE.md` and `provenance/manifest.json`.

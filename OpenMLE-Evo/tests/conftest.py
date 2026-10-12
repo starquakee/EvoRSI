@@ -5,6 +5,9 @@ import sys
 from pathlib import Path
 
 os.environ.setdefault("LOGGING_DIR", "/tmp")
+# litellm must use its bundled model-cost map: offline tests never fetch
+# mutable public pricing metadata at import time.
+os.environ.setdefault("LITELLM_LOCAL_MODEL_COST_MAP", "True")
 
 OPENMLE_EVO_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = OPENMLE_EVO_ROOT.parent

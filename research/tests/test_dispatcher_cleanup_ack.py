@@ -190,7 +190,7 @@ def _run_cancelled_job(monkeypatch, tmp_path, *, cleanup_verified):
     monkeypatch.setattr(td, "wait_for_file_exists", lambda *a, **k: True)
 
     def fake_exec(*, worker_endpoint, command, exec_dir, job_id, redis_client, db_conn,
-                  job_deadline, on_started=None, exec_class=None, job_root=None):
+                  job_deadline, on_started=None, exec_class=None, job_root=None, read_grants=None):
         if exec_class == "candidate":
             raise td.SandboxCommandCancelledError(
                 "sess-1", "cancelled", view=None, cleanup_verified=cleanup_verified

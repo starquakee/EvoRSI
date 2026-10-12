@@ -1,0 +1,16 @@
+{
+  "schema": "istratde-comparison-supervisor-live-launch.v1",
+  "source_commit": "87569545793c141e393e72450094975733a2bb95",
+  "experiment_manifest_sha256": "813d3fbdb7522c4a586e911340233b8e5960bb0b10f9bb1de820adb0fca5ad94",
+  "launcher_sha256": "a18c85275d37252ac16fb1dd8b0d9c2c714f3e31b858474203182d9668f8cb15",
+  "phase": "finished",
+  "started_at": 1791702295.7018778,
+  "outer_max_elapsed_seconds": 86400,
+  "automatic_resume_or_retry": false,
+  "original_ledger_deadline_and_budget_preserved": true,
+  "timeout_pid": 46131,
+  "returncode": 2,
+  "finished_at": 1791741756.5127325,
+  "monotonic_elapsed_seconds": 37510.954595244024,
+  "outer_timeout_exit": false
+}

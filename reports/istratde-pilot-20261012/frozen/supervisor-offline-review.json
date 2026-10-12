@@ -1,0 +1,46 @@
+{
+  "schema": "istratde-comparison-offline-supervisor-acceptance.v1",
+  "accepted": true,
+  "source_commit": "87569545793c141e393e72450094975733a2bb95",
+  "experiment_manifest_sha256": "813d3fbdb7522c4a586e911340233b8e5960bb0b10f9bb1de820adb0fca5ad94",
+  "accepted_at": "2026-10-11T07:04:43.170469+00:00",
+  "scope": "Offline implementation accepted for ONE authorized actual comparison; EXP-008 remains incomplete until real run and report delivery.",
+  "evidence": {
+    "repair": {
+      "path": ".runtime/comparison-exp-008-repair-1-state.json",
+      "sha256": "72791c8f70fbaa83a00400c3c8f5673992c554ffb1dbeb216f65702ffb43c9d6"
+    },
+    "test_results": {
+      "path": ".runtime/comparison-exp008-repair-test-evidence-20261011T065602380268Z.json",
+      "sha256": "1e3759a4cb9f4c5cf8ceb92944a4eee95723a6cf8b55f4d48d2d134bbfd3c1f9"
+    },
+    "independent_final_phase": {
+      "path": ".runtime/comparison-exp008-finalphase-recheck-20261011T065818251662Z.json",
+      "sha256": "10ad4e6146063034a410eb5ac86ffc7c289592a12a03cb399227e45d892d0c98"
+    },
+    "independent_stack": {
+      "path": ".runtime/comparison-exp007-supervisor-stack-20261011T065824685960Z.json",
+      "sha256": "50a241c36f91ba9c69436b98333d53959828ebc920aec30d3fb31744eb7a293a"
+    },
+    "earlier_full_baseline": {
+      "path": ".runtime/comparison-exp008-full-suite-tool-evidence-verified.json",
+      "sha256": "a19eb46b6b89b7c091fea78d4f96d370540f8473b16f41c2ab7b12ecea90f426"
+    },
+    "earlier_isolation_review": {
+      "path": ".runtime/comparison-exp007-supervisor-review.json",
+      "sha256": "54f27475c1f2e9ba5dd3d4c3b8d5dca7afb417561536a529f3130733652549b7"
+    },
+    "fresh_prepare": {
+      "path": ".runtime/comparison-exp008-final-prepare.json",
+      "sha256": "dcd18d255dc9fe47548a802d15b62603cd59e70a7e2289821899f97e5408bf50"
+    },
+    "fresh_preflight": {
+      "path": ".runtime/comparison-istratde/preflight-evidence.v1.json",
+      "sha256": "e1ec67ff6b06e9d87a3e832fc646c852e30e48e0e11f9066cd6486abee978383"
+    }
+  },
+  "affected_tests_passed": 94,
+  "independent_counterexamples_passed": 5,
+  "independent_stack_checks_passed": 99,
+  "automatic_retry_or_budget_extension": false
+}

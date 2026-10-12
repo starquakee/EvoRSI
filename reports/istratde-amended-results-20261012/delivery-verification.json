@@ -1,0 +1,12 @@
+{
+  "offline_tests_passed": 12,
+  "typecheck_files": 3,
+  "visual_figures_checked": 4,
+  "export_secret_findings": 0,
+  "historic_ledger_hashes_unchanged": true,
+  "new_model_calls": 0,
+  "new_final_jobs": 17,
+  "original_files_unchanged": 6413,
+  "independent_final_recomputations": 27,
+  "independent_bootstrap_matches": true
+}

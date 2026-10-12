@@ -20,37 +20,41 @@ research implementation. MetaDE sources are retained for future research.
 
 ## Current status
 
-**Research prototype — the initial ten-story implementation and bounded real-model acceptance are complete.**
+**Research prototype. The amended comparison found no demonstrated iStratDE
+advantage; the next repeatability diagnostic is prepared offline only.**
 
-The second, explicitly authorized acceptance round completed four real inner
-runs, each with **3 generations × 2 main candidates**, followed by one native
-iStratDE ask/evaluate/tell update. **24 model requests** used **49,903 tokens**
-in about **11 minutes 17 seconds**. All **24 sandbox jobs** received independently
-verified scores; best accuracy per configuration was **92.5%, 92.5%, 92.5%, 90%**.
-Observed operators were draft 8, improve 6, crossover 10; no debug call was
-needed in this round. Reusing the first run in the outer loop added zero model cost.
+The comparison covers three tasks, three methods (fixed, random, iStratDE), and
+three search seeds: 27 cells and 216 independent inner searches. Search consumed
+1,312 model requests and 2,728,412 tokens. A separately authorized final-only
+amendment reused ten verified predictions and completed 17 additional evaluations,
+with zero additional model calls, producing all 27 final scores.
 
-The research client now defaults to the isolated local gateway **127.0.0.1:6581**,
-with explicit legacy **6580** rollback configuration. Default task/data routing,
-source identity, independent scoring, and cleanup were verified with fixed
-synthetic jobs. The old stack remains preserved. Rollback verification covers
-request configuration and read-only reachability; it does not claim a new
-end-to-end legacy candidate evaluation.
+The task-balanced iStratDE minus random-search accuracy difference was **-0.3180
+percentage points**, with an exploratory 95% interval **[-0.8620, +0.0575]**.
+Against fixed settings it was **-0.1852**, interval **[-0.5555, +0.0345]**.
+Both intervals include zero. These results do not establish superiority,
+equivalence, or universal inferiority. The original strict audit remains **FAIL**;
+the retrospective audit qualifications and separate amendment remain explicit.
 
-The first round remains documented as **incomplete**: 17 requests, 81,717 tokens,
-7 executed jobs (6 scored and 1 execution failure). Its stopped ledger and
-incomplete unscored-node artifact were not rewritten. The two rounds total
-**41 model requests and 131,620 tokens**.
+Offline mechanism diagnosis checked all 216 search configurations, 1,312 operator
+events and 864 parent selections. Parameter wiring matched the recorded settings;
+short searches, nearly constant features and noisy/saturated validation feedback
+limited the effective search space.
 
-These are integration and boundary checks on a **120-row training / 40-row test
-synthetic classification task**, with one seed and one outer update. Scores fed
-back into search are not independent generalization evidence. No algorithmic
-superiority is established; equal-budget, multi-seed comparisons and MetaDE
-integration remain future work.
+The proposed next round varies crossover probability and score weight across nine
+settings on frozen Spambase training/validation data. Three or five repetitions
+are drafted. **Budget selection is pending; no live calibration runner or new
+model experiment has been started.** Final-test feedback is excluded.
 
-See the [second-round acceptance](reports/us009-round2-acceptance.md),
-[completed handoff](reports/us010-switch-handoff.md), and
-[preserved first-round report](reports/us009-real-acceptance.md).
+- [Amended results and limitations](reports/istratde-amended-results-20261012/README.md)
+- [Mechanism diagnosis](reports/istratde-mechanism-diagnosis-20261012/README.md)
+- [Preserved original incomplete report](reports/istratde-pilot-20261012/README.md)
+- [Next-round draft and offline tests](research/calibration/README.md)
+- [Earlier bounded pipeline acceptance](reports/us009-round2-acceptance.md)
+
+The isolated research gateway remains 127.0.0.1:6581; the legacy stack is preserved.
+MetaDE remains outside the main live loop. Publishing this source does not
+authorize model calls, budget resets, deployment, or reuse of historical ledgers.
 
 ## Repository layout
 

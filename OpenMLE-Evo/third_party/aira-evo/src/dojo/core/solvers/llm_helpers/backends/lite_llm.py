@@ -224,6 +224,14 @@ class LiteLLMClient:
         usage_stats: dict[str, Any] = {}
         finish_reason = None
         received_usage = False
+        # Provider request identity of the stream: every chunk that CARRIES
+        # an id must carry the same non-empty string id. Conflicting,
+        # empty or non-string ids mark the identity invalid (never silently
+        # dropped, never last-id-wins); chunks without any id are tolerated
+        # so legacy providers/fakes keep working.
+        stream_id: Any = None
+        stream_id_seen = False
+        stream_id_invalid = False
 
         try:
             for chunk in stream:
@@ -235,6 +243,16 @@ class LiteLLMClient:
                 if usage:
                     usage_stats.update(_to_dict(usage))
                     received_usage = True
+
+                if "id" in chunk_payload:
+                    chunk_id = chunk_payload.get("id")
+                    if not isinstance(chunk_id, str) or not chunk_id:
+                        stream_id_invalid = True
+                    elif not stream_id_seen:
+                        stream_id = chunk_id
+                        stream_id_seen = True
+                    elif chunk_id != stream_id:
+                        stream_id_invalid = True
 
                 for choice in chunk_payload.get("choices") or []:
                     choice_payload = _to_dict(choice)
@@ -266,6 +284,10 @@ class LiteLLMClient:
             usage_stats["reasoning_content"] = "".join(reasoning_parts)
         usage_stats["streamed"] = True
         usage_stats["usage_provenance"] = "provider" if received_usage else "estimated"
+        if stream_id_invalid:
+            usage_stats["provider_request_id_invalid"] = True
+        elif stream_id_seen:
+            usage_stats["provider_request_id"] = stream_id
 
         return "".join(text_parts), usage_stats
 

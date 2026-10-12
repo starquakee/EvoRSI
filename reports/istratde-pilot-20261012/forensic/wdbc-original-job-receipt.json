@@ -1,0 +1,38 @@
+{
+  "schema": "comparison-post-stop-original-job-receipt.v1",
+  "captured_at": "2026-10-11T18:16:07.241692+00:00",
+  "scope": "Read-only backend GET of the original job, no re-execution. Rejected by original final integrity gate; not an accepted final result.",
+  "job_id": "job_352f5c4e67b84932",
+  "task_id": "comparison_wdbc_final",
+  "status": "completed",
+  "created_at": "2026-10-11T18:02:32.241026Z",
+  "started_at": "2026-10-11T18:02:32.263019Z",
+  "completed_at": "2026-10-11T18:02:34.358267Z",
+  "score": 0.982301,
+  "evaluation": {
+    "score": 0.982301,
+    "split": "final",
+    "metric": "accuracy",
+    "task_id": "comparison_wdbc_final",
+    "direction": "maximize",
+    "evaluator": "external_trusted",
+    "row_count": 113,
+    "answer_sha256": "e1cbed4040ee9a6fceb2acf02e1beaf19d4aa7436f5852aa2c92f964d051f884",
+    "registry_version": "evaluator-registry.v1+final.e13d4be79badb151",
+    "prediction_sha256": "9c844892fd4ce7eb251d39f9b40efc4aa2816d905d8fcd513460e22581f73527"
+  },
+  "source_gate": {
+    "allowed": true,
+    "denials": [],
+    "check_kind": "static_admission_filter",
+    "entrypoint": "main.py",
+    "policy_sha256": "967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e",
+    "source_sha256": "d8c4e2d4a9c6f3156ae8b744cbf563111098ddf68e15cf0607e81e19fbee671e",
+    "policy_version": "source-gate.v2",
+    "entrypoint_sha256": "3f3e1734291a40b6c75bf1704aca610f8d0b6b91fa4eb9ccaea272a87709f6a0",
+    "security_boundary": false
+  },
+  "source_identity_verified": true,
+  "worker_cleanup_verified": true,
+  "accepted_final_result": false
+}

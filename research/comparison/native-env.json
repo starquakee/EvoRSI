@@ -1,0 +1,6 @@
+{
+  "python": "~/rsi-gpu/.venv/bin/python",
+  "jax_version": "0.4.33",
+  "jax_platform": "cpu",
+  "note": "Pre-existing legacy GPU venv (READ-ONLY). The research venv carries an incompatible newer JAX; native iStratDE runs ONLY through this pinned interpreter as a subprocess. Never upgrade or mutate this environment."
+}

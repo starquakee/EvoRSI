@@ -1,7 +1,7 @@
 # Public source snapshot
 
-Updated on 2026-10-10 from reviewed local source commit
-`f3f767fa6479c38e860862c6ab197cf10804ee0a`. This update follows the existing public main history;
+Updated on 2026-10-12 from local source commit
+`a9088058404e0042ea79ba247e4812d0e817b730` (reviewed comparison implementation plus tested offline calibration preparation). This update follows the existing public main history;
 the original local research history is preserved separately and is not pushed.
 The initial public root was created on 2026-10-09 because older local commits
 contained historical credentials already removed from current files.
@@ -45,11 +45,12 @@ credentials, a reviewed implementation, and a separately authorized budget;
 neither authorization receipts nor ledgers are included. Missing evidence must
 fail closed. Cloning or publishing does not authorize a new experiment.
 
-These results establish a bounded pipeline on one small synthetic task, not
-algorithmic superiority or independent generalization. MetaDE integration and
-equal-budget multi-seed comparisons remain future work.
+The later three-task, three-seed comparison and its final-only amendment are
+now included as redacted evidence. No iStratDE advantage was demonstrated; the
+original strict audit remains FAIL. The next diagnostic is offline preparation
+with a pending budget choice. MetaDE integration remains future work.
 
-## Checks on this publication update
+## Checks on the previous 2026-10-10 publication
 
 The actual public working copy passed 58 focused tests for generation outcomes,
 endpoint routing, rollback payloads, and historical-audit rejection cases.
@@ -61,3 +62,32 @@ against the reviewed local source commit. One public-only portability edit in
 `scripts/ralph/kimi-one-story.py` resolves the CLI through `Path.home()` instead
 of retaining a machine-specific user directory. No model call or live job was made
 for publication validation.
+
+## 2026-10-12 publication scope
+
+This update includes the comparison implementation/tests, redacted report bundles,
+mechanism diagnosis, and offline calibration schedules/analyzer. Report tables,
+plots, hashes and aggregate operator statistics are included; raw runtime ledgers,
+model messages, generated candidate programs, task CSVs/archives, validation/final
+answer files, and the private authorization receipt remain excluded. Dataset
+manifests retain hashes and source metadata; loading an absent dataset must fail.
+The shipped evaluator registry therefore requires local dataset preparation.
+
+Report export manifests describe the original local export, before publication
+path normalization and receipt exclusion; they are not a byte manifest of this
+Git checkout. Original local commit IDs identify execution history, not public
+Git commits. Historical FAIL results and all amendment limitations are retained.
+
+No historical local Git objects are imported. Changed Python/YAML implementation
+and test files are synchronized byte-for-byte from the source commit. Display
+paths in documents and JSON are normalized as before. This publication runs only
+offline checks and makes no new model or sandbox requests.
+
+The actual publication copy passed **215 offline tests** covering calibration,
+comparison protocol/specs, request budgets, schedule, analysis and final-only
+stage controls. All **109 synchronized Python/YAML files** matched their source
+commit bytes in the staged index. The final scan covered **997 tracked text
+files** with zero secret findings and zero research-code host-path violations;
+the checkout contains 1,009 tracked files including report images. Dataset,
+runtime and private-authorization exclusions were checked separately. These
+checks are not a fresh-clone end-to-end experiment or live-stack validation.

@@ -22,6 +22,7 @@ import hashlib
 import io
 import json
 import os
+import posixpath
 import stat
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,9 +35,11 @@ REGISTRY_SCHEMA_VERSION = 1
 REGISTRY_VERSION = "evaluator-registry.v1"
 DEFAULT_REGISTRY_PATH = Path(__file__).resolve().with_name("registry.v1.json")
 
-SPLITS = frozenset({"validation", "test"})
+SPLITS = frozenset({"validation", "test", "final"})
 HARD_MAX_PREDICTION_BYTES = 64 * 1024 * 1024
 HARD_MAX_ROWS = 1_000_000
+# EXP-003: trusted worker data grants live only under this worker-side root.
+WORKER_DATA_PUBLIC_ROOT = "/mnt/rsi_data"
 
 REASON_TASK_NOT_ALLOWLISTED = "task_not_allowlisted"
 REASON_PREDICTION_OVERSIZED = "prediction_oversized"
@@ -81,6 +84,11 @@ class TaskSpec:
     label_values: frozenset[int]
     max_prediction_bytes: int
     max_rows: int
+    # Trusted worker-side public data path (EXP-003): the exact read-only
+    # grant a candidate of this task receives. None means the task has no
+    # grantable public data and local-scratch candidate execution must
+    # fail closed rather than fall back to any candidate-supplied path.
+    worker_data_public_path: str | None = None
 
     @property
     def prediction_columns(self) -> list[str]:
@@ -209,6 +217,7 @@ def _load_task_spec(task_id: str, entry: Any, root: Path) -> TaskSpec:
         or any(type(v) is not int for v in label_values_raw)
     ):
         raise EvaluatorError(REASON_REGISTRY_INVALID, f"{task_id}: invalid label_values")
+    worker_data_public_path = _load_worker_data_public_path(task_id, entry)
     spec = TaskSpec(
         task_id=task_id,
         metric=metric,
@@ -223,9 +232,35 @@ def _load_task_spec(task_id: str, entry: Any, root: Path) -> TaskSpec:
             entry, "max_prediction_bytes", task_id, hard_max=HARD_MAX_PREDICTION_BYTES
         ),
         max_rows=_require_bounded_int(entry, "max_rows", task_id, hard_max=HARD_MAX_ROWS),
+        worker_data_public_path=worker_data_public_path,
     )
     _load_answer_rows(spec)  # integrity + parse check at load, fail closed
     return spec
+
+
+def _load_worker_data_public_path(task_id: str, entry: Mapping[str, Any]) -> str | None:
+    """Validate the optional trusted worker-side public data grant path.
+
+    When present it must be a canonical absolute POSIX path strictly
+    beneath WORKER_DATA_PUBLIC_ROOT (never the root itself, no traversal,
+    no trailing slash). This is the ONLY authority for candidate data
+    grants; candidate-supplied data_dir/environment values are validated
+    against it, never trusted.
+    """
+    raw = entry.get("worker_data_public_path")
+    if raw is None:
+        return None
+    if not isinstance(raw, str) or not raw or len(raw) > 512:
+        raise EvaluatorError(REASON_REGISTRY_INVALID, f"{task_id}: invalid worker_data_public_path")
+    normalized = posixpath.normpath(raw)
+    if (
+        normalized != raw
+        or not posixpath.isabs(normalized)
+        or normalized == WORKER_DATA_PUBLIC_ROOT
+        or not normalized.startswith(WORKER_DATA_PUBLIC_ROOT + "/")
+    ):
+        raise EvaluatorError(REASON_REGISTRY_INVALID, f"{task_id}: invalid worker_data_public_path")
+    return normalized
 
 
 def _parse_csv_bytes(data: bytes, *, max_rows: int, error_reason: str) -> list[list[str]]:

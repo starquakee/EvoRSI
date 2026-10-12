@@ -13,9 +13,12 @@ descendant, cannot be escaped without new privileges, and
 no-new-privileges is enforced container-wide):
 
   * Landlock (ABI >= 3, REQUIRED): read/execute only on system library
-    roots, read-only on the public data/input mounts, read-write ONLY on
+    roots, read-only ONLY on the exact trusted per-job read grants passed
+    via --read-grant (current task public data; EXP-003: no broad
+    /mnt/rsi_data or /mnt/rsi_storage root any more), read-write ONLY on
     the current job's scratch root (plus the GPU/null
-    device nodes CUDA needs). Other jobs' scratch trees, the evaluator
+    device nodes CUDA needs). Other jobs' scratch trees, other tasks'
+    data, the shared job storage tree, the evaluator
     tree (never mounted anyway) and any future writable share are
     unreachable for open/read/write/rename/unlink/symlink/truncate.
   * Seccomp notify-free filter (EPERM) on the metadata-mutation syscall
@@ -95,7 +98,28 @@ DEVICE_RW = ACCESS_FS_READ_FILE | ACCESS_FS_WRITE_FILE
 MIN_LANDLOCK_ABI = 3
 
 SYSTEM_READ_EXEC_ROOTS = ("/usr", "/lib", "/lib64", "/bin", "/sbin", "/etc", "/opt", "/proc", "/sys")
-PUBLIC_READ_ROOTS = ("/mnt/rsi_data", "/mnt/rsi_storage")
+# Narrowed read grants (EXP-003): there is NO broad public read root any
+# more. Candidate sessions get read-only access ONLY to the exact trusted
+# grant the worker supervisor passes via --read-grant argv (derived by the
+# dispatcher from the pinned registry mapping, never from candidate input),
+# and each grant must resolve canonically to one of these pinned exact
+# leaves — a parent directory, an unregistered task-shaped path or a child
+# of a leaf is refused even when it exists. The three data/final leaves
+# (EXP-006) hold the final-phase refit/final-feature inputs; they receive
+# bytes ONLY after the verified all-27-cell barrier, and final labels are
+# never placed there.
+ALLOWED_READ_GRANT_LEAVES = frozenset(
+    {
+        "/mnt/rsi_data/hello_synth/data/public",
+        "/mnt/rsi_data/comparison/banknote/data/public",
+        "/mnt/rsi_data/comparison/wdbc/data/public",
+        "/mnt/rsi_data/comparison/spambase/data/public",
+        "/mnt/rsi_data/comparison/banknote/data/final",
+        "/mnt/rsi_data/comparison/wdbc/data/final",
+        "/mnt/rsi_data/comparison/spambase/data/final",
+    }
+)
+MAX_READ_GRANTS = 8
 DEVICE_RW_PATHS = (
     "/dev/null",
     "/dev/zero",
@@ -183,19 +207,64 @@ def landlock_abi(libc: ctypes.CDLL | None = None) -> int:
     return int(result)
 
 
-def build_access_plan(scratch_root: Path, job_root: Path) -> List[Tuple[str, int]]:
+def validate_read_grant(
+    raw: str,
+    scratch_root: Path,
+    *,
+    allowed_leaves: Sequence[str] | None = None,
+) -> Path:
+    """Fail-closed validation of one trusted read grant path.
+
+    The grant must be a canonical absolute path that resolves (no symlink
+    components) EXACTLY to a pinned allowlisted task data leaf — never a
+    parent, never an unregistered task-shaped path, never a child of a
+    leaf — and never inside the writable scratch tree. It must name an
+    existing directory.
+    """
+    if not isinstance(raw, str) or not raw or len(raw) > 512:
+        raise TrampolineError("read_grant_invalid")
+    normalized = os.path.normpath(raw)
+    if normalized != raw or not os.path.isabs(normalized):
+        raise TrampolineError("read_grant_not_canonical")
+    real = os.path.realpath(normalized)
+    if real != normalized:
+        raise TrampolineError("read_grant_symlink")
+    real_path = Path(real)
+    scratch_real = Path(os.path.realpath(str(scratch_root)))
+    if real_path == scratch_real or scratch_real in real_path.parents:
+        raise TrampolineError("read_grant_inside_scratch")
+    leaves = ALLOWED_READ_GRANT_LEAVES if allowed_leaves is None else allowed_leaves
+    if real not in leaves:
+        raise TrampolineError("read_grant_not_allowlisted")
+    if not real_path.is_dir():
+        raise TrampolineError("read_grant_not_found")
+    return real_path
+
+
+def build_access_plan(
+    scratch_root: Path,
+    job_root: Path,
+    read_grants: Sequence[Path] = (),
+) -> List[Tuple[str, int]]:
     """Ordered (path, allowed_rights) rules; missing paths are skipped.
 
     Deliberately NO write grant on /tmp, /dev/shm or the scratch root
-    itself: the only writable tree is the current job root.
+    itself: the only writable tree is the current job root. Read-only
+    access beyond the system roots exists ONLY for the exact validated
+    trusted read grants (current task public data); there is no broad
+    /mnt/rsi_data or /mnt/rsi_storage grant any more (EXP-003).
     """
     plan: List[Tuple[str, int]] = []
     for root in SYSTEM_READ_EXEC_ROOTS:
         if os.path.exists(root):
             plan.append((root, READ_EXEC))
-    for root in PUBLIC_READ_ROOTS:
-        if os.path.isdir(root):
-            plan.append((root, READ_ONLY))
+    seen_grants = set()
+    for grant in read_grants:
+        grant_str = str(grant)
+        if grant_str in seen_grants:
+            continue
+        seen_grants.add(grant_str)
+        plan.append((grant_str, READ_ONLY))
     devices = list(DEVICE_RW_PATHS)
     for pattern in DEVICE_RW_GLOBS:
         devices.extend(sorted(glob.glob(pattern)))
@@ -310,12 +379,16 @@ def resolve_contained(scratch_root: Path, job_root: Path) -> Path:
 def run(argv: Sequence[str]) -> int:
     args = list(argv)
     job_root_raw: str | None = None
+    read_grant_raws: List[str] = []
     command: List[str] = []
     index = 0
     while index < len(args):
         item = args[index]
         if item == "--job-root" and index + 1 < len(args):
             job_root_raw = args[index + 1]
+            index += 2
+        elif item == "--read-grant" and index + 1 < len(args):
+            read_grant_raws.append(args[index + 1])
             index += 2
         elif item == "--":
             command = args[index + 1 :]
@@ -324,6 +397,8 @@ def run(argv: Sequence[str]) -> int:
             raise TrampolineError(f"unexpected_argument: {item}")
     if not job_root_raw:
         raise TrampolineError("job_root_required")
+    if len(read_grant_raws) > MAX_READ_GRANTS:
+        raise TrampolineError("too_many_read_grants")
     if not command:
         raise TrampolineError("command_required")
     if os.name != "posix" or not hasattr(os, "geteuid"):
@@ -338,6 +413,11 @@ def run(argv: Sequence[str]) -> int:
 
     scratch_root = Path(os.environ.get("RSI_WORKER_SCRATCH_ROOT", "/mnt/local_sandbox_workdir"))
     job_root = resolve_contained(scratch_root, Path(job_root_raw))
+    read_grants = [validate_read_grant(raw, scratch_root) for raw in read_grant_raws]
+    # A candidate job has exactly one current task: more than one distinct
+    # data grant is never legitimate and fails closed.
+    if len({str(grant) for grant in read_grants}) > 1:
+        raise TrampolineError("conflicting_read_grants")
 
     home_dir = job_root / ".home"
     tmp_dir = job_root / ".tmp"
@@ -345,7 +425,7 @@ def run(argv: Sequence[str]) -> int:
         path.mkdir(mode=0o700, exist_ok=True)
 
     _close_inherited_fds()
-    _apply_landlock(build_access_plan(scratch_root, job_root))
+    _apply_landlock(build_access_plan(scratch_root, job_root, read_grants))
     _apply_seccomp()
 
     env: Dict[str, str] = dict(os.environ)

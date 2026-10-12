@@ -144,6 +144,51 @@ def test_registry_rejects_answer_traversal(tmp_path: Path) -> None:
     assert excinfo.value.reason == "registry_invalid"
 
 
+# --- worker_data_public_path (EXP-003 trusted grant mapping) ---
+
+
+def test_default_registry_pins_worker_data_public_paths(registry: EvaluatorRegistry) -> None:
+    expected = {
+        "hello_synth": "/mnt/rsi_data/hello_synth/data/public",
+        "comparison_banknote": "/mnt/rsi_data/comparison/banknote/data/public",
+        "comparison_wdbc": "/mnt/rsi_data/comparison/wdbc/data/public",
+        "comparison_spambase": "/mnt/rsi_data/comparison/spambase/data/public",
+    }
+    for task_id, pinned in expected.items():
+        assert registry.task(task_id).worker_data_public_path == pinned, task_id
+
+
+def test_worker_data_public_path_optional_but_validated(tmp_path: Path) -> None:
+    # Absent field loads as None (no grantable public data; callers fail closed).
+    registry = EvaluatorRegistry.load(_write_registry(tmp_path, {}))
+    assert registry.task("t").worker_data_public_path is None
+    registry = EvaluatorRegistry.load(
+        _write_registry(tmp_path, {"worker_data_public_path": "/mnt/rsi_data/t/data/public"})
+    )
+    assert registry.task("t").worker_data_public_path == "/mnt/rsi_data/t/data/public"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "/mnt/rsi_data",  # the broad root itself is never grantable
+        "/mnt/rsi_data/",
+        "mnt/rsi_data/t",  # relative
+        "/mnt/rsi_data/t/../u",  # traversal
+        "/mnt/rsi_data/t/",  # trailing slash is not canonical
+        "/mnt/rsi_storage/t",  # wrong root
+        "/etc/rsi_data/t",
+        123,
+        "",
+    ],
+)
+def test_worker_data_public_path_rejected(tmp_path: Path, value) -> None:
+    path = _write_registry(tmp_path, {"worker_data_public_path": value})
+    with pytest.raises(EvaluatorError) as excinfo:
+        EvaluatorRegistry.load(path)
+    assert excinfo.value.reason == "registry_invalid"
+
+
 def test_registry_answer_integrity_checked_at_load(tmp_path: Path) -> None:
     path = _write_registry(tmp_path, {"answer_sha256": "0" * 64})
     with pytest.raises(EvaluatorError) as excinfo:

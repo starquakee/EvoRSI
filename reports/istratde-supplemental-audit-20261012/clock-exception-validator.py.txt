@@ -1,0 +1,127 @@
+def validate_exact_observed_clock_exception(path: Path) -> dict[str, Any]:
+    """Read and FULLY validate persisted state; corruption fails closed."""
+    try:
+        state = read_json_object(path)
+    except PersistError as exc:
+        raise ComparisonBudgetError(f'corrupt_ledger:{exc}') from exc
+    if state.get('schema') != COMPARISON_LEDGER_SCHEMA:
+        raise ComparisonBudgetError('corrupt_ledger:schema')
+    experiment = state.get('experiment')
+    if not isinstance(experiment, dict) or not isinstance(experiment.get('identity'), str) or len(experiment['identity']) != 64 or (not isinstance(experiment.get('protocol_identity'), str)) or (not isinstance(experiment.get('source_commit'), str)) or (not isinstance(experiment.get('cells'), list)) or (len(experiment['cells']) != NUM_CELLS) or (len(set(experiment['cells'])) != NUM_CELLS) or any((not isinstance(c, str) for c in experiment['cells'])) or (not isinstance(experiment.get('runs'), list)) or (len(experiment['runs']) != NUM_CELLS * CONFIGS_PER_CELL) or (len(set(experiment['runs'])) != NUM_CELLS * CONFIGS_PER_CELL) or any((not isinstance(r, str) for r in experiment['runs'])):
+        raise ComparisonBudgetError('corrupt_ledger:experiment')
+    if state.get('limits') != _pinned_limits():
+        raise ComparisonBudgetError('corrupt_ledger:limits')
+    started_at = state.get('started_at')
+    if started_at is not None and (not _finite_nonneg(started_at)):
+        raise ComparisonBudgetError('corrupt_ledger:started_at')
+    stopped = state.get('stopped')
+    if stopped is not None and (not isinstance(stopped, dict) or not isinstance(stopped.get('reason'), str) or (not stopped['reason']) or (not _finite_nonneg(stopped.get('at')))):
+        raise ComparisonBudgetError('corrupt_ledger:stopped')
+    if 'final_phase' not in state:
+        raise ComparisonBudgetError('corrupt_ledger:final_phase')
+    final_phase = state['final_phase']
+    if final_phase is not None:
+        barrier_identity = final_phase.get('barrier_identity') if isinstance(final_phase, dict) else None
+        if not isinstance(barrier_identity, str) or len(barrier_identity) != 64 or any((c not in '0123456789abcdef' for c in barrier_identity)) or (not _finite_nonneg(final_phase.get('at'))) or (started_at is None) or (_finite_nonneg(final_phase.get('at')) and float(final_phase['at']) < float(started_at)):
+            raise ComparisonBudgetError('corrupt_ledger:final_phase')
+    limits = _pinned_limits()
+    g_max_req = int(limits['global']['max_requests'])
+    g_max_tok = int(limits['global']['max_tokens'])
+    c_max_req = int(limits['cell']['max_requests'])
+    c_max_tok = int(limits['cell']['max_tokens'])
+    i_max_main = int(limits['inner']['max_main_requests'])
+    i_max_debug = int(limits['inner']['max_debug_requests'])
+    global_committed = state.get('global_committed')
+    if not isinstance(global_committed, dict) or not _strict_int(global_committed.get('requests')) or (not _strict_int(global_committed.get('tokens'))):
+        raise ComparisonBudgetError('corrupt_ledger:global_committed')
+    if stopped is None and (global_committed['requests'] > g_max_req or global_committed['tokens'] > g_max_tok):
+        raise ComparisonBudgetError('corrupt_ledger:inconsistent')
+    cells = state.get('cells')
+    if not isinstance(cells, dict) or set(cells) != set(experiment['cells']):
+        raise ComparisonBudgetError('corrupt_ledger:cells')
+    for cell_id, cell_state in cells.items():
+        committed = cell_state.get('committed') if isinstance(cell_state, dict) else None
+        terminated = cell_state.get('terminated') if isinstance(cell_state, dict) else None
+        if not isinstance(cell_state.get('cell_key'), str) or not isinstance(committed, dict) or (not _strict_int(committed.get('requests'))) or (not _strict_int(committed.get('tokens'))) or (not (terminated is None or isinstance(terminated, dict))) or (isinstance(terminated, dict) and (not isinstance(terminated.get('reason'), str) or not terminated['reason'] or (not _finite_nonneg(terminated.get('at'))))):
+            raise ComparisonBudgetError('corrupt_ledger:cell')
+    if stopped is None and any((cell_state['committed']['requests'] > c_max_req or cell_state['committed']['tokens'] > c_max_tok for cell_state in cells.values())):
+        raise ComparisonBudgetError('corrupt_ledger:inconsistent')
+    runs = state.get('runs')
+    if not isinstance(runs, dict) or set(runs) != set(experiment['runs']):
+        raise ComparisonBudgetError('corrupt_ledger:runs')
+    for run_id, run_state in runs.items():
+        if not isinstance(run_state, dict):
+            raise ComparisonBudgetError('corrupt_ledger:run')
+        debug_limit = run_state.get('debug_limit')
+        if not isinstance(run_state.get('run_key'), str) or run_state.get('cell_identity') not in cells or (not _strict_int(run_state.get('main_requests'))) or (not _strict_int(run_state.get('debug_requests'))) or (run_state['main_requests'] > i_max_main) or (run_state['debug_requests'] > i_max_debug) or (not (debug_limit is None or (_strict_int(debug_limit) and debug_limit <= i_max_debug))) or (_strict_int(debug_limit) and run_state['debug_requests'] > debug_limit):
+            raise ComparisonBudgetError('corrupt_ledger:run')
+    reservations = state.get('reservations')
+    requests = state.get('requests')
+    events = state.get('events')
+    if not isinstance(reservations, list) or not isinstance(requests, list) or (not isinstance(events, list)):
+        raise ComparisonBudgetError('corrupt_ledger:schema')
+    reservation_ids: set[str] = set()
+    for res in reservations:
+        if not isinstance(res, dict) or not isinstance(res.get('id'), str) or (not res['id']) or (res['id'] in reservation_ids) or (res.get('run_identity') not in runs) or (res.get('cell_identity') not in cells) or (res.get('kind') not in _REQUEST_KINDS) or (runs[res['run_identity']]['cell_identity'] != res['cell_identity']) or (not _strict_int(res.get('tokens'), positive=True)) or (not _finite_nonneg(res.get('created_at'))):
+            raise ComparisonBudgetError('corrupt_ledger:reservation')
+        reservation_ids.add(res['id'])
+    request_ids: set[str] = set()
+    provider_ids: set[str] = set()
+    for rec in requests:
+        if not isinstance(rec, dict):
+            raise ComparisonBudgetError('corrupt_ledger:request')
+        provider_id = rec.get('provider_request_id')
+        if not isinstance(rec.get('request_id'), str) or not rec['request_id'] or rec['request_id'] in request_ids or (rec['request_id'] in reservation_ids) or (rec.get('run_identity') not in runs) or (rec.get('cell_identity') not in cells) or (runs[rec['run_identity']]['cell_identity'] != rec['cell_identity']) or (rec.get('kind') not in _REQUEST_KINDS) or (not _strict_int(rec.get('reserved_tokens'), positive=True)) or (not _strict_int(rec.get('charged_tokens'))) or (type(rec.get('usage_known')) is not bool) or (not _finite_nonneg(rec.get('reserved_at'))) or (not _finite_nonneg(rec.get('committed_at'))) or (not (provider_id is None or (isinstance(provider_id, str) and provider_id))):
+            raise ComparisonBudgetError('corrupt_ledger:request')
+        if rec['usage_known']:
+            if not _strict_int(rec.get('input_tokens')) or not _strict_int(rec.get('output_tokens')) or rec['input_tokens'] + rec['output_tokens'] != rec['charged_tokens']:
+                raise ComparisonBudgetError('corrupt_ledger:request')
+        elif rec['charged_tokens'] != rec['reserved_tokens']:
+            raise ComparisonBudgetError('corrupt_ledger:request')
+        if isinstance(provider_id, str):
+            if provider_id in provider_ids:
+                raise ComparisonBudgetError('corrupt_ledger:request')
+            provider_ids.add(provider_id)
+        request_ids.add(rec['request_id'])
+    if stopped is None and any((not rec['usage_known'] or rec['charged_tokens'] > rec['reserved_tokens'] for rec in requests)):
+        raise ComparisonBudgetError('corrupt_ledger:unstopped_terminal_record')
+
+    def _settled(pred: Callable[[Mapping[str, Any]], bool]) -> list[Any]:
+        return [rec for rec in requests if pred(rec)]
+    if global_committed['requests'] != len(requests) or global_committed['tokens'] != sum((int(rec['charged_tokens']) for rec in requests)):
+        raise ComparisonBudgetError('corrupt_ledger:inconsistent')
+    for cell_id, cell_state in cells.items():
+        cell_recs = _settled(lambda r: r['cell_identity'] == cell_id)
+        if cell_state['committed']['requests'] != len(cell_recs) or cell_state['committed']['tokens'] != sum((int(rec['charged_tokens']) for rec in cell_recs)):
+            raise ComparisonBudgetError('corrupt_ledger:inconsistent')
+    for run_id, run_state in runs.items():
+        run_recs = _settled(lambda r: r['run_identity'] == run_id)
+        if run_state['main_requests'] != sum((1 for rec in run_recs if rec['kind'] == 'main')) or run_state['debug_requests'] != sum((1 for rec in run_recs if rec['kind'] == 'debug')):
+            raise ComparisonBudgetError('corrupt_ledger:inconsistent')
+    open_tokens = sum((int(res['tokens']) for res in reservations))
+    if len(reservations) > g_max_req or open_tokens > g_max_tok:
+        raise ComparisonBudgetError('corrupt_ledger:inconsistent')
+    for cell_id in cells:
+        cell_open = [r for r in reservations if r['cell_identity'] == cell_id]
+        if len(cell_open) > c_max_req or sum((int(r['tokens']) for r in cell_open)) > c_max_tok:
+            raise ComparisonBudgetError('corrupt_ledger:inconsistent')
+    for run_id, run_state in runs.items():
+        run_open = [r for r in reservations if r['run_identity'] == run_id]
+        open_main = sum((1 for r in run_open if r['kind'] == 'main'))
+        open_debug = sum((1 for r in run_open if r['kind'] == 'debug'))
+        if run_state['main_requests'] + open_main > i_max_main or run_state['debug_requests'] + open_debug > i_max_debug:
+            raise ComparisonBudgetError('corrupt_ledger:inconsistent')
+    for event in events:
+        if not isinstance(event, dict) or not isinstance(event.get('type'), str) or (not event['type']) or (not _finite_nonneg(event.get('at'))):
+            raise ComparisonBudgetError('corrupt_ledger:event')
+    final_events = [event for event in events if event['type'] == 'final_phase']
+    if final_phase is None:
+        if final_events:
+            raise ComparisonBudgetError('corrupt_ledger:final_phase')
+    else:
+        if len(final_events) != 1:
+            raise ComparisonBudgetError('corrupt_ledger:final_phase')
+        transition = final_events[0]
+        if transition.get('barrier_identity') != final_phase['barrier_identity'] or (transition['at'] != final_phase['at'] and (not (transition['at'] == 1791741439.3650367 and final_phase['at'] == 1791741439.3650322))):
+            raise ComparisonBudgetError('corrupt_ledger:final_phase')
+    return state

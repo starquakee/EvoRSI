@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import os
+import posixpath
 import re
 import shlex
 import sys
@@ -10,8 +11,8 @@ import threading
 import time
 import traceback
 from datetime import datetime
-from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from pathlib import Path, PurePosixPath
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 import httpx
 import psycopg2
@@ -316,6 +317,7 @@ RESULT_SCORING_ERROR = "scoring_failed"
 RESULT_TIMEOUT = "timeout"
 RESULT_SANDBOX_UNCONFIRMED = "sandbox_unconfirmed"
 RESULT_SOURCE_IDENTITY = "source_identity_failed"
+RESULT_DATA_GRANT = "data_grant_refused"
 
 DEFAULT_SHELL_POLL_SECONDS = max(1, int(os.getenv("SANDBOX_POLL_INTERVAL", "5")))
 COMMAND_DONE_STATUSES = {"completed", "terminated", "hard_timeout"}
@@ -953,6 +955,7 @@ class SandboxHTTPController:
         exec_dir: Optional[str],
         exec_class: Optional[str] = None,
         job_root: Optional[str] = None,
+        read_grants: Optional[Sequence[str]] = None,
     ) -> dict:
         payload = {
             "id": "",
@@ -965,6 +968,8 @@ class SandboxHTTPController:
             payload["exec_class"] = exec_class
         if job_root is not None:
             payload["job_root"] = job_root
+        if read_grants is not None:
+            payload["read_grants"] = list(read_grants)
         data = _extract_payload(self._request("/v1/shell/exec", payload))
         if not isinstance(data, dict) or not data.get("session_id"):
             raise SandboxHTTPError("沙盒未返回有效的 session_id。")
@@ -1043,11 +1048,13 @@ def execute_shell_command_with_deadline(
     on_started: Optional[Callable[[str], None]] = None,
     exec_class: Optional[str] = None,
     job_root: Optional[str] = None,
+    read_grants: Optional[Sequence[str]] = None,
 ) -> SandboxResultWrapper:
     controller = SandboxHTTPController(worker_endpoint)
     try:
         exec_payload = controller.exec_command(
-            command=command, exec_dir=exec_dir, exec_class=exec_class, job_root=job_root
+            command=command, exec_dir=exec_dir, exec_class=exec_class, job_root=job_root,
+            read_grants=read_grants,
         )
     except SandboxHTTPError as exc:
         raise SandboxStartupError(worker_endpoint, str(exc)) from exc
@@ -1155,6 +1162,56 @@ def resolve_evaluator_task_id(registry, job_data: dict) -> Optional[str]:
         if isinstance(candidate, str) and candidate in registry.tasks:
             return candidate
     return None
+
+
+def resolve_worker_data_grant(registry, job_data: dict) -> Tuple[Optional[str], Optional[str]]:
+    """Trusted narrowed data grant for one candidate job (EXP-003).
+
+    Returns (worker_data_public_path, None) or (None, reason). The grant
+    is derived ONLY from the pinned evaluator registry mapping
+    (task_id -> worker_data_public_path); candidate-supplied
+    data_dir/environment values are validated AGAINST it and any
+    disagreement fails closed with ``data_grant_source_mismatch``. Jobs
+    whose task is not allowlisted, or whose registry entry lacks the
+    pinned path, get no grant at all (``data_grant_unavailable``).
+
+    Unlike scoring-time resolution, AUTHORIZATION never falls back to the
+    data_dir basename: a filesystem path string chosen by the candidate
+    must not create worker authorization. Only the explicit task identity
+    fields (task_id / dataset_label) can select the grant.
+    """
+    if registry is None:
+        return None, "data_grant_unavailable"
+    task_id = None
+    for candidate in (job_data.get("task_id"), job_data.get("dataset_label")):
+        if isinstance(candidate, str) and candidate in registry.tasks:
+            task_id = candidate
+            break
+    if task_id is None:
+        return None, "data_grant_unavailable"
+    pinned = registry.tasks[task_id].worker_data_public_path
+    if not pinned:
+        return None, "data_grant_unavailable"
+    declared_sources: List[str] = []
+    data_dir = job_data.get("data_dir")
+    if data_dir:
+        declared_sources.append(str(data_dir))
+    environment = job_data.get("environment") or {}
+    for env_key in ("DATA_DIR", "SANDBOX_DATA_DIR"):
+        env_value = environment.get(env_key)
+        if env_value:
+            declared_sources.append(str(env_value))
+    for declared in declared_sources:
+        if ".." in PurePosixPath(declared).parts:
+            # Traversal in a candidate declaration is never trusted, even
+            # when it would resolve back onto the pinned path.
+            return None, "data_grant_source_mismatch"
+        normalized = posixpath.normpath(declared)
+        # A declaration may name either the task data root
+        # (<root>/data/public == pinned) or the pinned public dir itself.
+        if posixpath.join(normalized, "data", "public") != pinned and normalized != pinned:
+            return None, "data_grant_source_mismatch"
+    return pinned, None
 
 
 def score_job_externally(
@@ -1412,6 +1469,7 @@ def execute_job(redis_client: redis.Redis, db_conn, worker_endpoint: str, job_da
     evaluation_evidence: Optional[dict] = None
     source_identity_verified = False
     worker_cleanup_verified: Optional[bool] = None
+    data_grant: Optional[str] = None
 
     nfs_code_path = Path(code_file_path)
     code_path = nfs_code_path
@@ -1552,6 +1610,21 @@ def execute_job(redis_client: redis.Redis, db_conn, worker_endpoint: str, job_da
                     result_status = RESULT_SOURCE_IDENTITY
                     error_message = identity_msg
 
+            if result_status == RESULT_SUCCESS:
+                # Narrowed trusted data grant (EXP-003): the candidate's
+                # read-only data access comes ONLY from the pinned registry
+                # mapping, delivered as control-channel read_grants; a
+                # candidate-supplied data_dir/environment that disagrees
+                # fails closed and the candidate command never runs.
+                data_grant, grant_error = resolve_worker_data_grant(EXTERNAL_EVALUATOR_REGISTRY, job_data)
+                if grant_error is not None or data_grant is None:
+                    grant_msg = f"{grant_error}: no trusted worker data grant for job {job_id}"
+                    append_job_log(log_path, "FAILED", grant_msg)
+                    run_log_sections.append("--- DATA GRANT ---\n" + grant_msg)
+                    print(f"[dispatcher] job {job_id} data grant refused: {grant_msg}")
+                    result_status = RESULT_DATA_GRANT
+                    error_message = grant_msg
+
         if result_status != RESULT_SUCCESS:
             pass
         elif code_empty:
@@ -1576,7 +1649,14 @@ def execute_job(redis_client: redis.Redis, db_conn, worker_endpoint: str, job_da
 
                 # 只添加DATA_DIR这个环境变量. client上传的代码里可以使用这个变量来访问数据目录
                 # base_command_with_datadir = f"export DATA_DIR={shlex.quote(str(data_dir))}" + " && " + base_command
-                base_command_with_datadir = f"export DATA_DIR={shlex.quote(os.path.join(str(data_dir), 'data', 'public'))}" + " && " + base_command
+                if use_local_scratch:
+                    # EXP-003: DATA_DIR is the trusted pinned grant path,
+                    # never the candidate-supplied data_dir string.
+                    assert data_grant is not None  # guaranteed by the grant gate above
+                    data_export_path = data_grant
+                else:
+                    data_export_path = os.path.join(str(data_dir), 'data', 'public')
+                base_command_with_datadir = f"export DATA_DIR={shlex.quote(data_export_path)}" + " && " + base_command
 
                 def build_shell_command(done_marker_path: Path, submission_marker_path: Optional[Path] = None) -> str:
                     submission_marker_clause = ""
@@ -1642,6 +1722,7 @@ def execute_job(redis_client: redis.Redis, db_conn, worker_endpoint: str, job_da
                             exec_dir=working_dir,
                             exec_class="candidate" if use_local_scratch else None,
                             job_root=str(local_job_root(job_id, job_storage_dir)) if use_local_scratch else None,
+                            read_grants=[data_grant] if use_local_scratch and data_grant else None,
                             job_id=job_id,
                             redis_client=redis_client,
                             db_conn=db_conn,

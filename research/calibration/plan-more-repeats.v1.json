@@ -1,0 +1,739 @@
+{
+  "schema": "calibration-offline-plan.v1",
+  "status": "PREPARED_ONLY_NOT_AUTHORIZED_FOR_LIVE_EXECUTION",
+  "protocol_identity": "58b13595e2d45b56a94b04e1ed07b74d8d9b5a3574a1e93f714b157d936125f9",
+  "budget_option": "more_repeats",
+  "budget": {
+    "repeats": 5,
+    "trials": 45,
+    "max_requests": 360,
+    "max_tokens": 1000000,
+    "max_elapsed_seconds": 21600
+  },
+  "configurations": [
+    {
+      "config_id": "c00",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "config_id": "c01",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "config_id": "c02",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "config_id": "c03",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "config_id": "c04",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "config_id": "c05",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "config_id": "c06",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "config_id": "c07",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "config_id": "c08",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 2.0
+      }
+    }
+  ],
+  "center_config_id": "c04",
+  "schedule": [
+    {
+      "position": 0,
+      "repeat": 0,
+      "trial_id": "r00-c01",
+      "inner_seed": 3459089955,
+      "config_id": "c01",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 1,
+      "repeat": 0,
+      "trial_id": "r00-c03",
+      "inner_seed": 3459089955,
+      "config_id": "c03",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 2,
+      "repeat": 0,
+      "trial_id": "r00-c02",
+      "inner_seed": 3459089955,
+      "config_id": "c02",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 3,
+      "repeat": 0,
+      "trial_id": "r00-c04",
+      "inner_seed": 3459089955,
+      "config_id": "c04",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 4,
+      "repeat": 0,
+      "trial_id": "r00-c05",
+      "inner_seed": 3459089955,
+      "config_id": "c05",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 5,
+      "repeat": 0,
+      "trial_id": "r00-c07",
+      "inner_seed": 3459089955,
+      "config_id": "c07",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 6,
+      "repeat": 0,
+      "trial_id": "r00-c08",
+      "inner_seed": 3459089955,
+      "config_id": "c08",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 7,
+      "repeat": 0,
+      "trial_id": "r00-c00",
+      "inner_seed": 3459089955,
+      "config_id": "c00",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 8,
+      "repeat": 0,
+      "trial_id": "r00-c06",
+      "inner_seed": 3459089955,
+      "config_id": "c06",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 9,
+      "repeat": 1,
+      "trial_id": "r01-c02",
+      "inner_seed": 4145341801,
+      "config_id": "c02",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 10,
+      "repeat": 1,
+      "trial_id": "r01-c08",
+      "inner_seed": 4145341801,
+      "config_id": "c08",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 11,
+      "repeat": 1,
+      "trial_id": "r01-c07",
+      "inner_seed": 4145341801,
+      "config_id": "c07",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 12,
+      "repeat": 1,
+      "trial_id": "r01-c04",
+      "inner_seed": 4145341801,
+      "config_id": "c04",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 13,
+      "repeat": 1,
+      "trial_id": "r01-c05",
+      "inner_seed": 4145341801,
+      "config_id": "c05",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 14,
+      "repeat": 1,
+      "trial_id": "r01-c01",
+      "inner_seed": 4145341801,
+      "config_id": "c01",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 15,
+      "repeat": 1,
+      "trial_id": "r01-c00",
+      "inner_seed": 4145341801,
+      "config_id": "c00",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 16,
+      "repeat": 1,
+      "trial_id": "r01-c06",
+      "inner_seed": 4145341801,
+      "config_id": "c06",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 17,
+      "repeat": 1,
+      "trial_id": "r01-c03",
+      "inner_seed": 4145341801,
+      "config_id": "c03",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 18,
+      "repeat": 2,
+      "trial_id": "r02-c03",
+      "inner_seed": 3892611242,
+      "config_id": "c03",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 19,
+      "repeat": 2,
+      "trial_id": "r02-c02",
+      "inner_seed": 3892611242,
+      "config_id": "c02",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 20,
+      "repeat": 2,
+      "trial_id": "r02-c08",
+      "inner_seed": 3892611242,
+      "config_id": "c08",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 21,
+      "repeat": 2,
+      "trial_id": "r02-c00",
+      "inner_seed": 3892611242,
+      "config_id": "c00",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 22,
+      "repeat": 2,
+      "trial_id": "r02-c07",
+      "inner_seed": 3892611242,
+      "config_id": "c07",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 23,
+      "repeat": 2,
+      "trial_id": "r02-c04",
+      "inner_seed": 3892611242,
+      "config_id": "c04",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 24,
+      "repeat": 2,
+      "trial_id": "r02-c05",
+      "inner_seed": 3892611242,
+      "config_id": "c05",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 25,
+      "repeat": 2,
+      "trial_id": "r02-c01",
+      "inner_seed": 3892611242,
+      "config_id": "c01",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 26,
+      "repeat": 2,
+      "trial_id": "r02-c06",
+      "inner_seed": 3892611242,
+      "config_id": "c06",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 27,
+      "repeat": 3,
+      "trial_id": "r03-c03",
+      "inner_seed": 538298939,
+      "config_id": "c03",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 28,
+      "repeat": 3,
+      "trial_id": "r03-c06",
+      "inner_seed": 538298939,
+      "config_id": "c06",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 29,
+      "repeat": 3,
+      "trial_id": "r03-c08",
+      "inner_seed": 538298939,
+      "config_id": "c08",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 30,
+      "repeat": 3,
+      "trial_id": "r03-c04",
+      "inner_seed": 538298939,
+      "config_id": "c04",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 31,
+      "repeat": 3,
+      "trial_id": "r03-c00",
+      "inner_seed": 538298939,
+      "config_id": "c00",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 32,
+      "repeat": 3,
+      "trial_id": "r03-c05",
+      "inner_seed": 538298939,
+      "config_id": "c05",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 33,
+      "repeat": 3,
+      "trial_id": "r03-c02",
+      "inner_seed": 538298939,
+      "config_id": "c02",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 34,
+      "repeat": 3,
+      "trial_id": "r03-c01",
+      "inner_seed": 538298939,
+      "config_id": "c01",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 35,
+      "repeat": 3,
+      "trial_id": "r03-c07",
+      "inner_seed": 538298939,
+      "config_id": "c07",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 36,
+      "repeat": 4,
+      "trial_id": "r04-c07",
+      "inner_seed": 2286069912,
+      "config_id": "c07",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 37,
+      "repeat": 4,
+      "trial_id": "r04-c01",
+      "inner_seed": 2286069912,
+      "config_id": "c01",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 38,
+      "repeat": 4,
+      "trial_id": "r04-c03",
+      "inner_seed": 2286069912,
+      "config_id": "c03",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 39,
+      "repeat": 4,
+      "trial_id": "r04-c06",
+      "inner_seed": 2286069912,
+      "config_id": "c06",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 40,
+      "repeat": 4,
+      "trial_id": "r04-c04",
+      "inner_seed": 2286069912,
+      "config_id": "c04",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 1.0
+      }
+    },
+    {
+      "position": 41,
+      "repeat": 4,
+      "trial_id": "r04-c02",
+      "inner_seed": 2286069912,
+      "config_id": "c02",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 42,
+      "repeat": 4,
+      "trial_id": "r04-c00",
+      "inner_seed": 2286069912,
+      "config_id": "c00",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.05,
+        "score_weight": 0.0
+      }
+    },
+    {
+      "position": 43,
+      "repeat": 4,
+      "trial_id": "r04-c05",
+      "inner_seed": 2286069912,
+      "config_id": "c05",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.5,
+        "score_weight": 2.0
+      }
+    },
+    {
+      "position": 44,
+      "repeat": 4,
+      "trial_id": "r04-c08",
+      "inner_seed": 2286069912,
+      "config_id": "c08",
+      "decoded": {
+        "delta_weight": 0.4,
+        "novelty_weight": 0.25,
+        "max_debug_depth": 1,
+        "crossover_prob": 0.95,
+        "score_weight": 2.0
+      }
+    }
+  ],
+  "plan_identity": "3919e66c07d1adf93f5babdb7537c35de890b7313d897a35392110adc98d2dda"
+}

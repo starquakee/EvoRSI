@@ -1,0 +1,167 @@
+{
+  "schema": "istratde-redacted-export.v1",
+  "executed_source_commit": "87569545793c141e393e72450094975733a2bb95",
+  "redaction": "Repository root becomes <repo>; remaining local user-home root becomes <home>. Allowlist only; no model prompts/responses, credentials or raw job logs.",
+  "files": [
+    {
+      "source": ".runtime/comparison-reports/audit.json",
+      "export": "canonical/audit.json",
+      "original_sha256": "d18ae686f7de3af44ef45408b283a1ef12895c5d4aa2cd0b095eeb901b62a6cc",
+      "export_sha256": "f6a0c892e16e959544b02fd4383cd85bc07b7f92988159ee9a9492f61d779fcf",
+      "redacted_repo_path": true
+    },
+    {
+      "source": ".runtime/comparison-reports/forensic/final-recompute.csv",
+      "export": "forensic/final-recompute.csv",
+      "original_sha256": "b4d36548bd954a3f9682dbe1793c2e045c850c97dd1c8263fd480bb1a728d135",
+      "export_sha256": "4bd1c7cf4c3b78a618509a074b5832203324a3d70b9ea7e049825336c1b75377",
+      "redacted_repo_path": false,
+      "line_endings": "LF (original CSV preserved in runtime)"
+    },
+    {
+      "source": ".runtime/comparison-reports/forensic/forensic-summary.json",
+      "export": "forensic/forensic-summary.json",
+      "original_sha256": "76ed941fb0d0de38e3229db2cf79ee8e227bb8e80ebb1b5d4db89ec6b7e0021a",
+      "export_sha256": "76ed941fb0d0de38e3229db2cf79ee8e227bb8e80ebb1b5d4db89ec6b7e0021a",
+      "redacted_repo_path": false
+    },
+    {
+      "source": ".runtime/comparison-reports/forensic/plots/paired-comparison-unavailable.png",
+      "export": "forensic/plots/paired-comparison-unavailable.png",
+      "original_sha256": "d6e0c6aa161d65e0807801ef60918ad4498afa333b1253891fb60580d3557ea8",
+      "export_sha256": "d6e0c6aa161d65e0807801ef60918ad4498afa333b1253891fb60580d3557ea8",
+      "redacted_repo_path": false
+    },
+    {
+      "source": ".runtime/comparison-reports/forensic/plots/validation-vs-requests.png",
+      "export": "forensic/plots/validation-vs-requests.png",
+      "original_sha256": "6fbcf0ac9487ccfb315c48ef764adbf6e884bed2c2470795eea285401b6cf7ee",
+      "export_sha256": "6fbcf0ac9487ccfb315c48ef764adbf6e884bed2c2470795eea285401b6cf7ee",
+      "redacted_repo_path": false
+    },
+    {
+      "source": ".runtime/comparison-reports/forensic/plots/validation-vs-tokens.png",
+      "export": "forensic/plots/validation-vs-tokens.png",
+      "original_sha256": "09334b000d2ec48f4d63fd0d84f48baf77e71f1d4913a07d730b026e9de26275",
+      "export_sha256": "09334b000d2ec48f4d63fd0d84f48baf77e71f1d4913a07d730b026e9de26275",
+      "redacted_repo_path": false
+    },
+    {
+      "source": ".runtime/comparison-reports/forensic/results-27-cells.csv",
+      "export": "forensic/results-27-cells.csv",
+      "original_sha256": "6ec2668481a9d49be8abb17de66089f5cbd303adb868c210255fb5732d2ed060",
+      "export_sha256": "7e03c936984eef123b26bd3c4dd80ad53825c10dcdde52ef7ff4d37199e33ad4",
+      "redacted_repo_path": false,
+      "line_endings": "LF (original CSV preserved in runtime)"
+    },
+    {
+      "source": ".runtime/comparison-reports/forensic/validation-cost-curves.csv",
+      "export": "forensic/validation-cost-curves.csv",
+      "original_sha256": "3281ceb73047f7eb91fce9fc44178a7dde4b6c286067b99be876ddc65e3dcf1a",
+      "export_sha256": "cdf5acdb2d548cc8bc17c36dec4f30a66971323978c8fa77c9f647e6de2ad913",
+      "redacted_repo_path": false,
+      "line_endings": "LF (original CSV preserved in runtime)"
+    },
+    {
+      "source": ".runtime/comparison-reports/forensic/wdbc-original-job-receipt.json",
+      "export": "forensic/wdbc-original-job-receipt.json",
+      "original_sha256": "068adc0d01670fe6ce252999436f6a58cbaa110a0b68c136b42fa8e018f4e12f",
+      "export_sha256": "068adc0d01670fe6ce252999436f6a58cbaa110a0b68c136b42fa8e018f4e12f",
+      "redacted_repo_path": false
+    },
+    {
+      "source": ".runtime/comparison-reports/plots/incumbent-vs-requests.png",
+      "export": "canonical/plots/incumbent-vs-requests.png",
+      "original_sha256": "b6b29a0c7c82cd7ff6c73c017eaff14e63654753ec80dda94122ca520625d8e9",
+      "export_sha256": "b6b29a0c7c82cd7ff6c73c017eaff14e63654753ec80dda94122ca520625d8e9",
+      "redacted_repo_path": false
+    },
+    {
+      "source": ".runtime/comparison-reports/plots/incumbent-vs-tokens.png",
+      "export": "canonical/plots/incumbent-vs-tokens.png",
+      "original_sha256": "27227eb503af5f88628a3609e4c1dd095a6e43f4b72db51c0a2c31df8d88b2e0",
+      "export_sha256": "27227eb503af5f88628a3609e4c1dd095a6e43f4b72db51c0a2c31df8d88b2e0",
+      "redacted_repo_path": false
+    },
+    {
+      "source": ".runtime/comparison-reports/plots/paired-utility.png",
+      "export": "canonical/plots/paired-utility.png",
+      "original_sha256": "ec4f60fe9fc73be6bdde1deee24c301ab374c7a402b7d1d853b510b6f3eb0e50",
+      "export_sha256": "ec4f60fe9fc73be6bdde1deee24c301ab374c7a402b7d1d853b510b6f3eb0e50",
+      "redacted_repo_path": false
+    },
+    {
+      "source": ".runtime/comparison-reports/report.json",
+      "export": "canonical/report.json",
+      "original_sha256": "9288d56405c88fa277b0936c4f6c88eeb054f15ae26655a7d5545fa7acdfb4e7",
+      "export_sha256": "9288d56405c88fa277b0936c4f6c88eeb054f15ae26655a7d5545fa7acdfb4e7",
+      "redacted_repo_path": false
+    },
+    {
+      "source": ".runtime/comparison-reports/report.md",
+      "export": "canonical/report.md",
+      "original_sha256": "6dea89d973727aefe322fd31d80d107b64394e19da84def7cbd485806b645c8a",
+      "export_sha256": "6dea89d973727aefe322fd31d80d107b64394e19da84def7cbd485806b645c8a",
+      "redacted_repo_path": false
+    },
+    {
+      "source": "tasks/prd-istratde-comparison.md",
+      "export": "frozen/protocol.md",
+      "original_sha256": "8b3685b93557ed8145abcfcf3a994e930997534c9bd4918f0e63e15531dc280b",
+      "export_sha256": "dadc97e91ae5896505e4367f6fccb339fcc1b6c036e516ad95d94e0d25e60f14",
+      "redacted_repo_path": false,
+      "redacted_home_path": true
+    },
+    {
+      "source": ".runtime/comparison-istratde/experiment-manifest.v1.json",
+      "export": "frozen/experiment-manifest.v1.json",
+      "original_sha256": "813d3fbdb7522c4a586e911340233b8e5960bb0b10f9bb1de820adb0fca5ad94",
+      "export_sha256": "df8b742abb9e849e26e8f6b5bec28e5d12f29de3f58f4a2497cece4a7c89d095",
+      "redacted_repo_path": false,
+      "redacted_home_path": true
+    },
+    {
+      "source": "research/comparison/data-manifest.v1.json",
+      "export": "frozen/data-manifest.v1.json",
+      "original_sha256": "b2666d2d839b50acfba86f44ea685b3f011e5c8f9e18073e57e3375acf3d3704",
+      "export_sha256": "b2666d2d839b50acfba86f44ea685b3f011e5c8f9e18073e57e3375acf3d3704",
+      "redacted_repo_path": false
+    },
+    {
+      "source": ".runtime/comparison-live-supervisor-state.json",
+      "export": "frozen/supervisor.json",
+      "original_sha256": "9610f6a10315b714cd5daabc38f4c987043bd1dbf55c097348a3e2edad72bd3b",
+      "export_sha256": "9610f6a10315b714cd5daabc38f4c987043bd1dbf55c097348a3e2edad72bd3b",
+      "redacted_repo_path": false
+    },
+    {
+      "source": ".runtime/comparison-exp008-final-preflight.json",
+      "export": "frozen/preflight.json",
+      "original_sha256": "dc4784854b79a0eb1ddad8d9fafd7ea5f93887519621a505d0b48da2a1f8ab13",
+      "export_sha256": "2b27d30713fda8c9bb4ec096bdc575132af9d2c7d39c92c48c122dd22bc8911c",
+      "redacted_repo_path": true,
+      "redacted_home_path": true
+    },
+    {
+      "source": ".runtime/comparison-exp008-supervisor-offline-review.json",
+      "export": "frozen/supervisor-offline-review.json",
+      "original_sha256": "be028d026fe0fd04816f2c76a0b903d2c4eac84b4861e5e0f73b15a91193fb9e",
+      "export_sha256": "be028d026fe0fd04816f2c76a0b903d2c4eac84b4861e5e0f73b15a91193fb9e",
+      "redacted_repo_path": false
+    },
+    {
+      "source": ".runtime/comparison-report-command-result.json",
+      "export": "frozen/report-command-receipt.json",
+      "original_sha256": "e4d9874cc7c415c5ea9cd6e285f664b8b3c7db6cb57ab2a65dca215032e01702",
+      "export_sha256": "3f977c9b3360225912c88607a8ea9ba27dcf280c630776cdc4d20beccf30593f",
+      "redacted_repo_path": true
+    },
+    {
+      "source": ".runtime/comparison-native-completion-supervisor-check.json",
+      "export": "frozen/native-completion-review.json",
+      "original_sha256": "5480f41e49a380dcfad692ef16f47e4d730fceeb2f7011416bcb7be52ae365c2",
+      "export_sha256": "5480f41e49a380dcfad692ef16f47e4d730fceeb2f7011416bcb7be52ae365c2",
+      "redacted_repo_path": false
+    }
+  ]
+}

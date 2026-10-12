@@ -1,0 +1,56 @@
+{
+  "schema": "istratde-two-dimensional-repeatability-draft.v1",
+  "status": "DRAFT_BUDGET_SELECTION_PENDING_NO_LIVE_CALLS",
+  "purpose": "Determine whether crossover probability and score weight create repeatable differences in validation performance under the existing inner search.",
+  "task": "spambase",
+  "data_policy": "Reuse frozen training/validation split only. No final scoring or final-score-guided selection. Final features and labels unavailable to new candidates.",
+  "grid": {
+    "crossover_prob": [0.05, 0.5, 0.95],
+    "score_weight": [0.0, 1.0, 2.0]
+  },
+  "fixed_parameters": {
+    "delta_weight": 0.4,
+    "novelty_weight": 0.25,
+    "max_debug_depth": 1
+  },
+  "inner_search": {
+    "generations": 3,
+    "main_candidates_per_generation": 2,
+    "max_main_requests": 6,
+    "max_debug_requests": 2,
+    "max_requests": 8,
+    "max_tokens_per_trial": 40000,
+    "max_job_seconds": 600,
+    "max_trial_seconds": 1800,
+    "model_profile": "Unchanged K3: reasoning_effort low, max_output_tokens8192, temperature1, top_p0.95, streaming, transport retries0"
+  },
+  "budget_options": {
+    "small": {"repeats": 3, "trials": 27, "max_requests": 216, "max_tokens": 600000, "max_elapsed_seconds": 14400},
+    "more_repeats": {"repeats": 5, "trials": 45, "max_requests": 360, "max_tokens": 1000000, "max_elapsed_seconds": 21600}
+  },
+  "schedule": {
+    "rule": "Each repetition is a block containing each of nine configurations exactly once; order independently shuffled from a frozen schedule seed.",
+    "schedule_seed": 20261012,
+    "inner_seed_rule": "SHA256 domain calibration-repeatability.v1|spambase|repeat_index, first32bits; same inner seed across configurations within repetition; no model-output determinism claimed.",
+    "fresh_search": true,
+    "result_cache_or_candidate_sharing": false,
+    "model_and_sandbox_serial": true
+  },
+  "primary_measurement": "Best trusted validation accuracy from each independent inner search; retain null outcomes, completion counts, all request/token costs and operator traces.",
+  "analysis": {
+    "summaries": ["configuration means and repeat standard deviations", "paired differences from the center configuration", "nine-configuration rank agreement across repetition blocks", "operator and parent-selection sensitivity", "realized cost and failure rates"],
+    "variance_model": "Complete balanced matrix: additive configuration plus repetition-block model. Residual mean square estimates within-design noise; configuration variance estimate=max(0,(MS_configuration-MS_residual)/repeats).",
+    "stability_gate": "Exploratory diagnostic flag only: complete matrix, estimated configuration ICC>=0.5, and median pairwise Spearman rank correlation across blocks>=0.5. Tied ranks use averages; constant ranks provide no evidence. No hypothesis-test or algorithm superiority claim.",
+    "incomplete_matrix": "No stable-signal verdict; report observed data and stop reasons without reruns or imputation.",
+    "confirmation": "Any subsequent algorithm superiority claim requires a separately frozen protocol and untouched confirmation evaluation. This diagnostic does not produce a new final-test result."
+  },
+  "integrity": {
+    "separate_runtime_and_ledger": true,
+    "preserve_all_prior_ledgers_and_artifacts": true,
+    "restore_search_only_new_stack": true,
+    "mask_prior_final_publication_from_worker": true,
+    "unknown_usage_or_cleanup_uncertain": "stop globally",
+    "no_automatic_retry_resume_or_budget_extension": true,
+    "live_start_requires_frozen_source_manifest_and_offline_review": true
+  }
+}

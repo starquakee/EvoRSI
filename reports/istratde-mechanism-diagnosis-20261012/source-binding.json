@@ -1,0 +1,40 @@
+{
+  "files": [
+    {
+      "file": "research/comparison/runner.py",
+      "working_file_sha256": "afe02937f9f50a5dde3a44eee05c6f1a16a39858b9b6e13ae603cd7032746b0c",
+      "frozen_git_blob_sha256": "afe02937f9f50a5dde3a44eee05c6f1a16a39858b9b6e13ae603cd7032746b0c",
+      "exact_bytes_equal": true,
+      "equal_after_CRLF_to_LF": true,
+      "python_AST_equal": true
+    },
+    {
+      "file": "research/comparison/control.py",
+      "working_file_sha256": "42c62ea8dd11e0268cd6b71f85e5beb015b5f64e2c924f15cd166811357a8654",
+      "frozen_git_blob_sha256": "42c62ea8dd11e0268cd6b71f85e5beb015b5f64e2c924f15cd166811357a8654",
+      "exact_bytes_equal": true,
+      "equal_after_CRLF_to_LF": true,
+      "python_AST_equal": true
+    },
+    {
+      "file": "OpenMLE-Evo/third_party/aira-evo/src/dojo/solvers/evo/evo.py",
+      "working_file_sha256": "dd2bd17385f6e9c7f45e6a247d8139797ed6989516a006ad28f34a3844da19df",
+      "frozen_git_blob_sha256": "dd2bd17385f6e9c7f45e6a247d8139797ed6989516a006ad28f34a3844da19df",
+      "exact_bytes_equal": true,
+      "equal_after_CRLF_to_LF": true,
+      "python_AST_equal": true
+    },
+    {
+      "file": "OpenMLE-Evo/third_party/aira-evo/src/dojo/solvers/evo/experience.py",
+      "working_file_sha256": "b128bf2c98ea64f03c446b422393297446b978eb2575c65dfce655db60e69e26",
+      "frozen_git_blob_sha256": "3ea98b1e129b6f36289b775e05a99ba26886acab5ca8447ed34cd70c985be808",
+      "exact_bytes_equal": false,
+      "equal_after_CRLF_to_LF": true,
+      "python_AST_equal": true
+    }
+  ],
+  "note": "experience.py has checkout CRLF versus Git LF only; normalized text and Python AST identical. Other three files byte-identical.",
+  "original_runtime_files_unchanged": 6413,
+  "new_model_requests": 0,
+  "new_sandbox_jobs": 0
+}

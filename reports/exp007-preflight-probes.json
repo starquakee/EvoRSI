@@ -1,0 +1,520 @@
+{
+  "gateway": "http://127.0.0.1:6581",
+  "generated_at": "2026-10-11T03:05:08Z",
+  "probes": [
+    {
+      "detail": "ledger_exists=False review_exists=False",
+      "name": "precondition: no live comparison ledger/supervisor review under .runtime/comparison-istratde",
+      "ok": true
+    },
+    {
+      "detail": "auth=True venv=True validate=True",
+      "name": "precondition: auth.env, .venv-research interpreter and validate_stack.py present",
+      "ok": true
+    },
+    {
+      "detail": "legacy={'sandbox_api': {'id': '2f43f16b3a21', 'image': 'ghcr.io/lifeissosolong/openmle-sandbox-controller-api:1.0.0', 'started_at': '2026-09-29T08:09:15.79152544Z', 'status': 'running'}, 'sandbox_dispatcher': {'id': '399601eddef7', 'image': 'ghcr.io/lifeissosolong/openmle-sandbox-controller-dispatcher:1.0.0', 'started_at': '2026-09-29T15:18:43.646516469Z', 'status': 'running'}, 'sandbox_nginx': {'id': 'fe32eecd62af', 'image': 'docker.m.daocloud.io/library/nginx:1.25.5', 'started_at': '2026-09-29T08:09:15.775130785Z', 'status': 'running'}, 'sandbox_postgres': {'id': '6a2f0c6bc35c', 'image': 'docker.m.daocloud.io/library/postgres:15.14', 'started_at': '2026-09-29T08:09:15.794341944Z', 'status': 'running'}, 'sandbox_redis': {'id': 'a81df5e9dce4', 'image': 'docker.m.daocloud.io/library/redis:7.4.6', 'started_at': '2026-09-29T08:09:15.788644723Z', 'status': 'running'}, 'ml-sandbox-gpu-0': {'id': 'ca177a4368f9', 'image': 'ghcr.io/lifeissosolong/openmle-sandbox-worker:1.0.0', 'started_at': '2026-09-29T08:56:08.113386715Z', 'status': 'running'}}",
+      "legacy": {
+        "ml-sandbox-gpu-0": {
+          "id": "ca177a4368f9",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-worker:1.0.0",
+          "started_at": "2026-09-29T08:56:08.113386715Z",
+          "status": "running"
+        },
+        "sandbox_api": {
+          "id": "2f43f16b3a21",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-controller-api:1.0.0",
+          "started_at": "2026-09-29T08:09:15.79152544Z",
+          "status": "running"
+        },
+        "sandbox_dispatcher": {
+          "id": "399601eddef7",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-controller-dispatcher:1.0.0",
+          "started_at": "2026-09-29T15:18:43.646516469Z",
+          "status": "running"
+        },
+        "sandbox_nginx": {
+          "id": "fe32eecd62af",
+          "image": "docker.m.daocloud.io/library/nginx:1.25.5",
+          "started_at": "2026-09-29T08:09:15.775130785Z",
+          "status": "running"
+        },
+        "sandbox_postgres": {
+          "id": "6a2f0c6bc35c",
+          "image": "docker.m.daocloud.io/library/postgres:15.14",
+          "started_at": "2026-09-29T08:09:15.794341944Z",
+          "status": "running"
+        },
+        "sandbox_redis": {
+          "id": "a81df5e9dce4",
+          "image": "docker.m.daocloud.io/library/redis:7.4.6",
+          "started_at": "2026-09-29T08:09:15.788644723Z",
+          "status": "running"
+        }
+      },
+      "name": "precondition: all six legacy containers running (identity recorded, inspect-only)",
+      "ok": true
+    },
+    {
+      "detail": "new_stack={'rsi_nginx': {'id': 'e2db4f0bc89f', 'image': 'docker.m.daocloud.io/library/nginx:1.25.5', 'started_at': '2026-10-07T19:44:19.949700771Z', 'status': 'running'}, 'rsi_api': {'id': '96086ccaae76', 'image': 'ghcr.io/lifeissosolong/openmle-sandbox-controller-api:1.0.0', 'started_at': '2026-10-08T14:30:40.838838696Z', 'status': 'running'}, 'rsi_dispatcher': {'id': '080a0280ae50', 'image': 'ghcr.io/lifeissosolong/openmle-sandbox-controller-dispatcher:1.0.0', 'started_at': '2026-10-11T02:02:40.455408479Z', 'status': 'running'}, 'rsi_postgres': {'id': '15dc1bb1796e', 'image': 'docker.m.daocloud.io/library/postgres:15.14', 'started_at': '2026-10-07T17:55:24.486511115Z', 'status': 'running'}, 'rsi_redis': {'id': '88568a4088ca', 'image': 'docker.m.daocloud.io/library/redis:7.4.6', 'started_at': '2026-10-07T17:55:24.466789222Z', 'status': 'running'}, 'rsi_worker': {'id': '0f7b2b29cfe2', 'image': 'ghcr.io/lifeissosolong/openmle-sandbox-worker:1.0.0', 'started_at': '2026-10-11T02:01:41.793111365Z', 'status': 'running'}}",
+      "name": "precondition: all six new-stack containers running (identity recorded)",
+      "new_stack": {
+        "rsi_api": {
+          "id": "96086ccaae76",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-controller-api:1.0.0",
+          "started_at": "2026-10-08T14:30:40.838838696Z",
+          "status": "running"
+        },
+        "rsi_dispatcher": {
+          "id": "080a0280ae50",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-controller-dispatcher:1.0.0",
+          "started_at": "2026-10-11T02:02:40.455408479Z",
+          "status": "running"
+        },
+        "rsi_nginx": {
+          "id": "e2db4f0bc89f",
+          "image": "docker.m.daocloud.io/library/nginx:1.25.5",
+          "started_at": "2026-10-07T19:44:19.949700771Z",
+          "status": "running"
+        },
+        "rsi_postgres": {
+          "id": "15dc1bb1796e",
+          "image": "docker.m.daocloud.io/library/postgres:15.14",
+          "started_at": "2026-10-07T17:55:24.486511115Z",
+          "status": "running"
+        },
+        "rsi_redis": {
+          "id": "88568a4088ca",
+          "image": "docker.m.daocloud.io/library/redis:7.4.6",
+          "started_at": "2026-10-07T17:55:24.466789222Z",
+          "status": "running"
+        },
+        "rsi_worker": {
+          "id": "0f7b2b29cfe2",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-worker:1.0.0",
+          "started_at": "2026-10-11T02:01:41.793111365Z",
+          "status": "running"
+        }
+      },
+      "ok": true
+    },
+    {
+      "detail": "active_jobs=0",
+      "name": "precondition: new stack idle (no queued/running jobs)",
+      "ok": true
+    },
+    {
+      "detail": "leftover=[]",
+      "name": "precondition: no candidate-uid processes in rsi_worker",
+      "ok": true
+    },
+    {
+      "detail": "tasks=['comparison_banknote', 'comparison_spambase', 'comparison_wdbc', 'hello_synth'] version=evaluator-registry.v1",
+      "name": "precondition: dispatcher baseline registry is the tracked SEARCH registry",
+      "ok": true
+    },
+    {
+      "current_phase": "search",
+      "detail": "current_phase='search'",
+      "name": "precondition: PRODUCTION phase module reports current dispatcher phase = search",
+      "ok": true
+    },
+    {
+      "detail": "sha256=bbd9dabd49fa6488b87fd85fd23d723a97496b3a385cc3ec2a4de60e98876722",
+      "name": "probe program identity (PROG, constant bytes)",
+      "ok": true,
+      "prog_sha256": "bbd9dabd49fa6488b87fd85fd23d723a97496b3a385cc3ec2a4de60e98876722"
+    },
+    {
+      "detail": "{\"banknote\": {\"extras\": [], \"readme\": true}, \"spambase\": {\"extras\": [], \"readme\": true}, \"wdbc\": {\"extras\": [], \"readme\": true}}",
+      "name": "final-publication host dirs pre-created as current user, ONLY placeholder README.md each",
+      "ok": true
+    },
+    {
+      "containers_after": {
+        "rsi_dispatcher": {
+          "id": "080a0280ae50",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-controller-dispatcher:1.0.0",
+          "started_at": "2026-10-11T02:02:40.455408479Z",
+          "status": "running"
+        },
+        "rsi_worker": {
+          "id": "0f7b2b29cfe2",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-worker:1.0.0",
+          "started_at": "2026-10-11T02:01:41.793111365Z",
+          "status": "running"
+        }
+      },
+      "containers_before": {
+        "rsi_dispatcher": {
+          "id": "080a0280ae50",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-controller-dispatcher:1.0.0",
+          "started_at": "2026-10-11T02:02:40.455408479Z",
+          "status": "running"
+        },
+        "rsi_worker": {
+          "id": "0f7b2b29cfe2",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-worker:1.0.0",
+          "started_at": "2026-10-11T02:01:41.793111365Z",
+          "status": "running"
+        }
+      },
+      "detail": "compose_ok=True worker=running dispatcher=running out=s  Waiting\n Container rsi_postgres  Waiting\n Container rsi_postgres  Healthy\n Container rsi_redis  Healthy\n Container rsi_postgres  Healthy\n Container rsi_redis  Healthy\n Container rsi_worker  Healthy",
+      "dispatcher_recreated": false,
+      "name": "compose up -d applied; rsi_worker healthy and rsi_dispatcher running",
+      "ok": true,
+      "worker_recreated": false
+    },
+    {
+      "detail": "[PASS] legacy gateway 6580 answers\n\nVALIDATION PASSED",
+      "name": "validate_stack.py PASS after final-mount activation",
+      "ok": true
+    },
+    {
+      "detail": "{\"banknote\": true, \"spambase\": true, \"wdbc\": true}",
+      "name": "final leaf mounts visible inside rsi_worker (sentinel readable, exact bytes, all 3 tasks)",
+      "ok": true,
+      "visible": {
+        "banknote": true,
+        "spambase": true,
+        "wdbc": true
+      }
+    },
+    {
+      "detail": "{\"banknote\": true, \"spambase\": true, \"wdbc\": true}",
+      "name": "visibility sentinels removed (host gone, worker mount no longer shows them)",
+      "ok": true,
+      "removed": {
+        "banknote": true,
+        "spambase": true,
+        "wdbc": true
+      }
+    },
+    {
+      "detail": "job=job_de1c3ff61f294cf7 status=completed score=0.996283",
+      "job_id": "job_de1c3ff61f294cf7",
+      "name": "search phase: comparison_banknote PROG job completed with finite score in [0,1]",
+      "ok": true,
+      "score": 0.996283
+    },
+    {
+      "detail": "leftover=[]",
+      "name": "cleanup scan empty after search job job_de1c3ff61f294cf7 (comparison_banknote)",
+      "ok": true
+    },
+    {
+      "detail": "job=job_427c757c302642c7 status=completed score=0.947368",
+      "job_id": "job_427c757c302642c7",
+      "name": "search phase: comparison_wdbc PROG job completed with finite score in [0,1]",
+      "ok": true,
+      "score": 0.947368
+    },
+    {
+      "detail": "leftover=[]",
+      "name": "cleanup scan empty after search job job_427c757c302642c7 (comparison_wdbc)",
+      "ok": true
+    },
+    {
+      "detail": "job=job_5dd9042a1aa24a77 status=completed score=0.901854",
+      "job_id": "job_5dd9042a1aa24a77",
+      "name": "search phase: comparison_spambase PROG job completed with finite score in [0,1]",
+      "ok": true,
+      "score": 0.901854
+    },
+    {
+      "detail": "leftover=[]",
+      "name": "cleanup scan empty after search job job_5dd9042a1aa24a77 (comparison_spambase)",
+      "ok": true
+    },
+    {
+      "detail": "canary=/mnt/rsi_storage/mlsandbox/jobs/exp007-canary-job/code/canary.txt",
+      "name": "cross-job storage canary planted via dispatcher control channel",
+      "ok": true
+    },
+    {
+      "detail": "probes={\"bundled_wdbc_opt\": \"masked_empty\", \"bundled_wdbc_usr\": \"masked_empty\", \"comparison_parent_list\": \"denied:13\", \"cross_final_wdbc_list\": \"denied:13\", \"cross_job_storage_canary\": \"denied:13\", \"cross_task_spambase_public\": \"denied:13\", \"cross_task_wdbc_public\": \"denied:13\", \"evaluator_tree_list\": \"denied:2\", \"final_tree_dispatcher_only\": \"denied:2\", \"own_final_dir_list\": \"denied:13\", \"own_final_train_read\": \"denied:2\", \"own_task_train\": \"REACHED\", \"storage_tree_list\": \"denied:13\", \"wdbc_loader\": \"denied:StopIteration\"}",
+      "job_id": "job_f28bfbbad0f64f15",
+      "name": "search denial battery: own grant readable; cross-task/parent/evaluator/final/storage denied",
+      "ok": true,
+      "probe_results": {
+        "bundled_wdbc_opt": "masked_empty",
+        "bundled_wdbc_usr": "masked_empty",
+        "comparison_parent_list": "denied:13",
+        "cross_final_wdbc_list": "denied:13",
+        "cross_job_storage_canary": "denied:13",
+        "cross_task_spambase_public": "denied:13",
+        "cross_task_wdbc_public": "denied:13",
+        "evaluator_tree_list": "denied:2",
+        "final_tree_dispatcher_only": "denied:2",
+        "own_final_dir_list": "denied:13",
+        "own_final_train_read": "denied:2",
+        "own_task_train": "REACHED",
+        "storage_tree_list": "denied:13",
+        "wdbc_loader": "denied:StopIteration"
+      }
+    },
+    {
+      "detail": "usr=masked_empty opt=masked_empty loader=denied:StopIteration",
+      "job_id": "job_f28bfbbad0f64f15",
+      "name": "bundled labeled WDBC masked (both copies empty) and sklearn loader blocked",
+      "ok": true
+    },
+    {
+      "detail": "final_train=denied:2 final_list=denied:13",
+      "job_id": "job_f28bfbbad0f64f15",
+      "name": "final dirs hold no final bytes for candidates (final train.csv open denied; placeholders only)",
+      "ok": true
+    },
+    {
+      "detail": "leftover=[]",
+      "name": "cleanup scan empty after search denial job job_f28bfbbad0f64f15",
+      "ok": true
+    },
+    {
+      "detail": "intact=True removed=True",
+      "name": "cross-job canary bytes intact after candidate probes and removed",
+      "ok": true
+    },
+    {
+      "answer_sha256": "e33fdb975894ddd55dc159b11a7e3b2d2210c7ff2993d8c2b08b52138b32e40b",
+      "detail": "check=HOSTLOAD|comparison-final-smoke-v1|final|accuracy|e33fdb975894ddd55dc159b11a7e3b2d2210c7ff2993d8c2b08b52138b32e40b",
+      "name": "synthetic final dataset + phase registry fabricated; host-side EvaluatorRegistry.load OK",
+      "ok": true,
+      "registry_sha256": "c8b40db2bbbdd01b07ae691f27fce2fd70dac61f719ec7101a87c4d4c1912ad9"
+    },
+    {
+      "detail": "job=job_aebd0cd2ef1a4a72 status=failed result=data_grant_refused",
+      "job_id": "job_aebd0cd2ef1a4a72",
+      "name": "comparison_banknote_final REFUSED while search registry active (unknown task, never executed)",
+      "ok": true
+    },
+    {
+      "detail": "leftover=[]",
+      "name": "cleanup scan empty after refused pre-switch final job job_aebd0cd2ef1a4a72",
+      "ok": true
+    },
+    {
+      "detail": "result=activated_final failures=[] phase_after=final error=None rc=0",
+      "dispatcher_after": {
+        "id": "a531e09b58f3",
+        "image": "ghcr.io/lifeissosolong/openmle-sandbox-controller-dispatcher:1.0.0",
+        "started_at": "2026-10-11T03:04:37.250852637Z",
+        "status": "running"
+      },
+      "dispatcher_before": {
+        "id": "080a0280ae50",
+        "image": "ghcr.io/lifeissosolong/openmle-sandbox-controller-dispatcher:1.0.0",
+        "started_at": "2026-10-11T02:02:40.455408479Z",
+        "status": "running"
+      },
+      "dispatcher_recreated": true,
+      "driver_stderr": "",
+      "expected_registry_sha256": "c8b40db2bbbdd01b07ae691f27fce2fd70dac61f719ec7101a87c4d4c1912ad9",
+      "name": "phase switch via PRODUCTION phase.activate_final_phase (hash-bound, deadline-bound)",
+      "ok": true,
+      "outcome": {
+        "error": null,
+        "failures": [],
+        "phase_after": "final",
+        "result": "activated_final"
+      }
+    },
+    {
+      "detail": "env=/opt/rsi_final/registry.final.v1.json tasks=['comparison_banknote_final'] version=comparison-final-smoke-v1 log_clean=True",
+      "env_value": "/opt/rsi_final/registry.final.v1.json",
+      "loaded_tasks": [
+        "comparison_banknote_final"
+      ],
+      "name": "phase switch evidence: dispatcher env pinned, phase registry loaded, log tail clean",
+      "ok": true,
+      "registry_version": "comparison-final-smoke-v1"
+    },
+    {
+      "answer_sha256": "e33fdb975894ddd55dc159b11a7e3b2d2210c7ff2993d8c2b08b52138b32e40b",
+      "detail": "job=job_8f4763efd06041c5 score=1.0 rc=0 stderr=",
+      "evidence": {
+        "answer_sha256": "e33fdb975894ddd55dc159b11a7e3b2d2210c7ff2993d8c2b08b52138b32e40b",
+        "cleanup": {
+          "live_jobs": [],
+          "submission_intents": [],
+          "uncertain_submissions": []
+        },
+        "direction": "maximize",
+        "entrypoint": "main.py",
+        "entrypoint_sha256": "bbd9dabd49fa6488b87fd85fd23d723a97496b3a385cc3ec2a4de60e98876722",
+        "evaluator": "external_trusted",
+        "job_id": "job_8f4763efd06041c5",
+        "metric": "accuracy",
+        "policy_sha256": "967a32ccc4aef78353d81edbb266080ade15e5b63ec613836980fea5de8e627e",
+        "policy_version": "source-gate.v2",
+        "prediction_sha256": "47ee5295f8c2be914874bd083c59a567ca6354c188232323f0858b3c4aa55218",
+        "prediction_snapshot": "/mnt/rsi_storage/mlsandbox/jobs/2026-10-11/final/job_8f4763efd06041c5/prediction_snapshot.csv",
+        "registry_version": "comparison-final-smoke-v1",
+        "row_count": 8,
+        "source_identity_verified": true,
+        "source_sha256": "edaf0bf94f6ec9adc857d78a2d2cf113e4c7770cac3cb2046dd7c42c4bdcad03",
+        "split": "final",
+        "status": "completed",
+        "submitted_source_sha256": "bbd9dabd49fa6488b87fd85fd23d723a97496b3a385cc3ec2a4de60e98876722",
+        "task_id": "comparison_banknote_final",
+        "worker_cleanup_verified": true
+      },
+      "job_id": "job_8f4763efd06041c5",
+      "name": "REAL sandbox_final_executor: comparison_banknote_final completed with finite score",
+      "ok": true,
+      "prediction_sha256": "47ee5295f8c2be914874bd083c59a567ca6354c188232323f0858b3c4aa55218",
+      "score": 1.0,
+      "source_sha256": "bbd9dabd49fa6488b87fd85fd23d723a97496b3a385cc3ec2a4de60e98876722"
+    },
+    {
+      "detail": "evidence_task=comparison_banknote_final split=final registry=comparison-final-smoke-v1",
+      "job_id": "job_8f4763efd06041c5",
+      "name": "executor evidence binds final task/split/metric/answer/registry identity",
+      "ok": true
+    },
+    {
+      "detail": "recomputed=1.0 rows=8 score=1.0 snapshot_sha_match=True",
+      "job_id": "job_8f4763efd06041c5",
+      "name": "host-side independent accuracy recomputation matches executor score exactly",
+      "ok": true,
+      "recomputed_accuracy": 1.0,
+      "row_count": 8
+    },
+    {
+      "detail": "leftover=[]",
+      "name": "cleanup scan empty after real-executor final job job_8f4763efd06041c5",
+      "ok": true
+    },
+    {
+      "detail": "probes={\"comparison_parent_list\": \"denied:13\", \"cross_final_spambase_list\": \"denied:13\", \"cross_final_wdbc_list\": \"denied:13\", \"cross_final_wdbc_train\": \"denied:2\", \"evaluator_tree_list\": \"denied:2\", \"final_tree_dispatcher_only\": \"denied:2\", \"own_final_train\": \"REACHED\", \"search_public_banknote\": \"denied:13\", \"search_public_wdbc\": \"denied:13\", \"storage_tree_list\": \"denied:13\"}",
+      "job_id": "job_9580292a3f824d9c",
+      "name": "final-phase grant isolation: own data/final leaf readable; other tasks' final/public trees denied",
+      "ok": true,
+      "probe_results": {
+        "comparison_parent_list": "denied:13",
+        "cross_final_spambase_list": "denied:13",
+        "cross_final_wdbc_list": "denied:13",
+        "cross_final_wdbc_train": "denied:2",
+        "evaluator_tree_list": "denied:2",
+        "final_tree_dispatcher_only": "denied:2",
+        "own_final_train": "REACHED",
+        "search_public_banknote": "denied:13",
+        "search_public_wdbc": "denied:13",
+        "storage_tree_list": "denied:13"
+      }
+    },
+    {
+      "detail": "leftover=[]",
+      "name": "cleanup scan empty after final denial job job_9580292a3f824d9c",
+      "ok": true
+    },
+    {
+      "detail": "job=job_ebb597e4a5514bd6 status=failed result=data_grant_refused",
+      "job_id": "job_ebb597e4a5514bd6",
+      "name": "search task comparison_banknote UNKNOWN to dispatcher while final registry active",
+      "ok": true
+    },
+    {
+      "detail": "leftover=[]",
+      "name": "cleanup scan empty after unknown-search-task job job_ebb597e4a5514bd6",
+      "ok": true
+    },
+    {
+      "detail": "result=activated_search failures=[] phase_after=search error=None rc=0",
+      "driver_stderr": "",
+      "name": "restore via PRODUCTION phase.restore_search_phase",
+      "ok": true,
+      "outcome": {
+        "error": null,
+        "failures": [],
+        "phase_after": "search",
+        "result": "activated_search"
+      }
+    },
+    {
+      "detail": "{\"banknote\": [\"README.md\"], \"smoke_state_removed\": true, \"spambase\": [\"README.md\"], \"wdbc\": [\"README.md\"]}",
+      "name": "synthetic final CSVs, answers, phase registry and smoke state removed; placeholders restored",
+      "ok": true
+    },
+    {
+      "detail": "env=/opt/rsi_repo/research/evaluator/registry.v1.json tasks=['comparison_banknote', 'comparison_spambase', 'comparison_wdbc', 'hello_synth'] version=evaluator-registry.v1",
+      "name": "dispatcher confirmed back on the tracked SEARCH registry (env + loaded tasks)",
+      "ok": true
+    },
+    {
+      "detail": "job=job_a7a6a800c9a84e99 status=completed score=0.996283",
+      "job_id": "job_a7a6a800c9a84e99",
+      "name": "search phase restored: comparison_banknote PROG job completed with score",
+      "ok": true,
+      "score": 0.996283
+    },
+    {
+      "detail": "leftover=[]",
+      "name": "cleanup scan empty after restored search job job_a7a6a800c9a84e99",
+      "ok": true
+    },
+    {
+      "detail": "leftover=[]",
+      "name": "final candidate-uid process scan empty in rsi_worker",
+      "ok": true
+    },
+    {
+      "detail": "[PASS] legacy gateway 6580 answers\n\nVALIDATION PASSED",
+      "name": "validate_stack.py PASS after restore",
+      "ok": true
+    },
+    {
+      "detail": "{\"ml-sandbox-gpu-0\": true, \"sandbox_api\": true, \"sandbox_dispatcher\": true, \"sandbox_nginx\": true, \"sandbox_postgres\": true, \"sandbox_redis\": true}",
+      "identity_unchanged": {
+        "ml-sandbox-gpu-0": true,
+        "sandbox_api": true,
+        "sandbox_dispatcher": true,
+        "sandbox_nginx": true,
+        "sandbox_postgres": true,
+        "sandbox_redis": true
+      },
+      "legacy_after": {
+        "ml-sandbox-gpu-0": {
+          "id": "ca177a4368f9",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-worker:1.0.0",
+          "started_at": "2026-09-29T08:56:08.113386715Z",
+          "status": "running"
+        },
+        "sandbox_api": {
+          "id": "2f43f16b3a21",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-controller-api:1.0.0",
+          "started_at": "2026-09-29T08:09:15.79152544Z",
+          "status": "running"
+        },
+        "sandbox_dispatcher": {
+          "id": "399601eddef7",
+          "image": "ghcr.io/lifeissosolong/openmle-sandbox-controller-dispatcher:1.0.0",
+          "started_at": "2026-09-29T15:18:43.646516469Z",
+          "status": "running"
+        },
+        "sandbox_nginx": {
+          "id": "fe32eecd62af",
+          "image": "docker.m.daocloud.io/library/nginx:1.25.5",
+          "started_at": "2026-09-29T08:09:15.775130785Z",
+          "status": "running"
+        },
+        "sandbox_postgres": {
+          "id": "6a2f0c6bc35c",
+          "image": "docker.m.daocloud.io/library/postgres:15.14",
+          "started_at": "2026-09-29T08:09:15.794341944Z",
+          "status": "running"
+        },
+        "sandbox_redis": {
+          "id": "a81df5e9dce4",
+          "image": "docker.m.daocloud.io/library/redis:7.4.6",
+          "started_at": "2026-09-29T08:09:15.788644723Z",
+          "status": "running"
+        }
+      },
+      "name": "legacy-six identities unchanged (id, image, StartedAt)",
+      "ok": true
+    }
+  ],
+  "story": "EXP-007",
+  "verdict": "PASS"
+}

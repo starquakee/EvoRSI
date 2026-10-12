@@ -60,6 +60,13 @@ formal_baseline/
 *.csv
 # US-005: synthetic hello_synth evaluator fixture, pinned by registry sha256
 !research/evaluator/tasks/hello_synth/test_answer.csv
+# EXP-002: pinned comparison dataset artifacts (manifest hash-bound)
+!tasks/comparison/*/data/public/*.csv
+!research/evaluator/tasks/comparison_*/validation_answer.csv
+!research/comparison/sealed/*/canonical.csv
+!research/comparison/sealed/*/final_features.csv
+!research/comparison/sealed/*/final_labels.csv
+!research/comparison/sealed/*/trainval.csv
 *.parquet
 *.jsonl
 OpenMLE-Gym/OpenMLE-Gym/
@@ -78,10 +85,8 @@ assets/
 !tasks/hello_synth/data/public/test.csv
 !tasks/hello_synth/data/public/sample_submission.csv
 
-# Excluded from public source publication
-OpenMLE-Gym/examples/real-run-3-concurrency/
-OpenMLE-Evo/tts_search/data/naturebench_lite_v2_eda/
-research/provenance/inventory-*.json
-HANDOFF.md
-RUNBOOK.md
-progress.txt
+# Public distribution excludes real task features/labels and local authorization.
+research/comparison/sealed/
+tasks/comparison/**/data/public/*.csv
+research/evaluator/tasks/comparison_*/*.csv
+reports/istratde-amended-results-20261012/stage/authorization.json

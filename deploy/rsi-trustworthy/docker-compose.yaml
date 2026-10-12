@@ -103,7 +103,14 @@ services:
       LOCAL_SCRATCH_MIN_FREE_BYTES: "1073741824"
       LOCAL_SCRATCH_STAGE_TIMEOUT_SECONDS: "120"
       EXTERNAL_EVALUATOR_ENABLED: "1"
-      EVALUATOR_REGISTRY_PATH: /opt/rsi_repo/research/evaluator/registry.v1.json
+      # Loaded ONCE at dispatcher startup. Default: the tracked SEARCH
+      # registry. The EXP-006/007 final phase uses a separate synthetic/real
+      # phase registry under the ignored runtime publication root (mounted
+      # read-only at /opt/rsi_final below): switch phases ONLY while the
+      # stack is idle by recreating JUST this service with
+      # RSI_EVALUATOR_REGISTRY_PATH=/opt/rsi_final/registry.final.v1.json
+      # set in the environment, then switch back the same way.
+      EVALUATOR_REGISTRY_PATH: ${RSI_EVALUATOR_REGISTRY_PATH:-/opt/rsi_repo/research/evaluator/registry.v1.json}
       # Worker control key (batch-2): dispatcher side of the authenticated
       # worker control channel; the key file itself is mounted ro below.
       RSI_WORKER_CONTROL_KEY_FILE: /run/rsi_control/key
@@ -119,6 +126,11 @@ services:
       - ../../.runtime/rsi-trustworthy/worker_control_key:/run/rsi_control/key:ro
       - ../../.runtime/rsi-trustworthy/storage:/mnt/rsi_storage
       - ../../.runtime/rsi-trustworthy/workdir:/mnt/local_sandbox_workdir
+      # EXP-006/007 final phase: the ignored runtime publication root holds
+      # the phase-specific registry.final.v1.json and its trusted final
+      # answer files (dispatcher-side only; the worker never mounts them).
+      # Empty/placeholder until the verified all-27-cell barrier publishes.
+      - ../../.runtime/comparison-istratde/final-publication:/opt/rsi_final:ro
     networks:
       - control
       - execution
@@ -169,6 +181,32 @@ services:
       # data directory is mounted; the private answer and trusted metric
       # are never mounted (jobs use data_dir=/mnt/rsi_data/hello_synth).
       - ../../tasks/hello_synth/data/public:/mnt/rsi_data/hello_synth/data/public:ro
+      # Public comparison task inputs (EXP-003): read-only, one exact
+      # data/public directory per task. Raw archives, sealed final/refit
+      # data (research/comparison/sealed) and validation answers
+      # (research/evaluator) are NEVER mounted. Candidate read access is
+      # additionally narrowed per job by the trampoline: a candidate sees
+      # only its own task's directory via trusted read_grants.
+      - ../../tasks/comparison/banknote/data/public:/mnt/rsi_data/comparison/banknote/data/public:ro
+      - ../../tasks/comparison/wdbc/data/public:/mnt/rsi_data/comparison/wdbc/data/public:ro
+      - ../../tasks/comparison/spambase/data/public:/mnt/rsi_data/comparison/spambase/data/public:ro
+      # Final-phase inputs (EXP-006): read-only exact data/final leaves.
+      # Sources are the IGNORED runtime publication root: the tracked search
+      # data/registry stay byte-identical, and final bytes exist only after
+      # the verified all-27-cell barrier publishes them (final labels are
+      # NEVER mounted). Candidates only reach them via a per-job trusted
+      # read grant for final-phase jobs.
+      - ../../.runtime/comparison-istratde/final-publication/banknote/data/final:/mnt/rsi_data/comparison/banknote/data/final:ro
+      - ../../.runtime/comparison-istratde/final-publication/wdbc/data/final:/mnt/rsi_data/comparison/wdbc/data/final:ro
+      - ../../.runtime/comparison-istratde/final-publication/spambase/data/final:/mnt/rsi_data/comparison/spambase/data/final:ro
+      # EXP-003: mask the sklearn-bundled FULL LABELED WDBC dataset (both
+      # interpreter copies found by inventory; identical sha256). /usr and
+      # /opt remain read-executable for libraries, but candidate code must
+      # never reach benchmark labels through a package asset. /dev/null
+      # masks make the CSVs empty; ordinary sklearn estimators are
+      # unaffected. The image itself is NOT mutated (old stack shares it).
+      - /dev/null:/usr/local/lib/python3.10/dist-packages/sklearn/datasets/data/breast_cancer.csv:ro
+      - /dev/null:/opt/python3.11/lib/python3.11/site-packages/sklearn/datasets/data/breast_cancer.csv:ro
       # Per-job scratch: the only writable share.
       - ../../.runtime/rsi-trustworthy/workdir:/mnt/local_sandbox_workdir
     networks:

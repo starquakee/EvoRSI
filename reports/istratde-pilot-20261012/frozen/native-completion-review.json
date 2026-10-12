@@ -1,0 +1,28 @@
+{
+  "purpose": "offline production-provider comparison against independent two-tell reference",
+  "source_sha256": {
+    "research/comparison/native.py": "cc96a4fae8101110770ddbd6fc21327b03be5edfd40dc03d8451c57b74f5cf06",
+    "research/comparison/native_driver.py": "d808f7b8f04dc71d047c1fdbf048943613d5d3c611abd042754cc1a5d709fdb0",
+    "research/vendor/istratde/src/istratde/algorithms/jax/istratde.py": "b465229b8b19f0dff4820035d37c852477b64e222a13293808410d045c98ac50"
+  },
+  "reference_sha256": "e20d560f816f9741567e3ba89afd58a4666487dee7f3208ef8b3d6b406fc170c",
+  "checks": [
+    {
+      "seed": 11,
+      "both_echoes_exact": true,
+      "second_tell_population_exact": true
+    },
+    {
+      "seed": 22,
+      "both_echoes_exact": true,
+      "second_tell_population_exact": true
+    },
+    {
+      "seed": 33,
+      "both_echoes_exact": true,
+      "second_tell_population_exact": true
+    }
+  ],
+  "accepted_experiment": false,
+  "model_calls": 0
+}

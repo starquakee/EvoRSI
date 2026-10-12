@@ -114,7 +114,7 @@ def harness(monkeypatch, tmp_path):
     commands: list[str] = []
 
     def fake_exec(*, worker_endpoint, command, exec_dir, job_id, redis_client, db_conn,
-                  job_deadline, on_started=None, exec_class=None, job_root=None):
+                  job_deadline, on_started=None, exec_class=None, job_root=None, read_grants=None):
         commands.append(command)
         events.append("exec_start")
         if on_started is not None:

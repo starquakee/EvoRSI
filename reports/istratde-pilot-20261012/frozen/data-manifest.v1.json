@@ -1,0 +1,256 @@
+{
+  "float_rendering": "python repr() shortest round-trip; -0.0 normalized to 0.0",
+  "id_scheme": "per-split deterministic stdlib random.Random shuffle seeded by sha256(shuffle_domain|task|split) (label-independent), then sequential ids 0..n-1 in shuffled order; original identifiers and row indices never propagate",
+  "schema": "istratde-comparison-data.v1",
+  "shuffle_domain": "istratde-comparison-rowshuffle.v1",
+  "sklearn_version": "1.6.1",
+  "split_seed_base": 20261010,
+  "tasks": {
+    "banknote": {
+      "archive": {
+        "member": "data_banknote_authentication.txt",
+        "member_sha256": "d0539aaed2139ba7a587b3e34fb345ce503ff7d5d33dbf9912d8e195ce425cb9",
+        "name": "banknote+authentication.zip",
+        "sha256": "1e2acd9a2085fadf3d8145c12d3d22af853320d52294a6590c2eaf75fdc05227"
+      },
+      "class_counts": {
+        "0": 762,
+        "1": 610
+      },
+      "features": 4,
+      "files": {
+        "research/comparison/sealed/banknote/canonical.csv": "91919fdc530a32fdd60f995a2c2673945f6684381ebbad6fcd07a1c47b7e7018",
+        "research/comparison/sealed/banknote/final_features.csv": "9a66c88ec675de55c9fddb13410b2c0c01cb9abaf14da5431bdf76557b013906",
+        "research/comparison/sealed/banknote/final_labels.csv": "09f925e28a61c1f1112f0b51e6a004dcc410aa86265eb3a63b8f6e55abb8cecf",
+        "research/comparison/sealed/banknote/trainval.csv": "69679a988a697ebb241e40e973442d2c57b56b8aa540b7225e0fc420b1d4da7b",
+        "research/evaluator/tasks/comparison_banknote/validation_answer.csv": "1403bdfeb94a2b6b52361f2dcff4f80caecbf351228d0ac4701818caa291de69",
+        "tasks/comparison/banknote/data/public/sample_submission.csv": "ce9a4d5bef807041b1e532d49c997304a337383b511b3ad443c3b5ae25d32416",
+        "tasks/comparison/banknote/data/public/test.csv": "9fbc8daa26c1958d0dfa18963becc546466afa3a19927bffbae111444f830010",
+        "tasks/comparison/banknote/data/public/train.csv": "c8a63bf422ef995bc145898cfea0df816498ebf81709fcff9991a5745126e37e"
+      },
+      "fold_assignment_sha256": "318d6b8b469ce599cb4a553ff9a34c8f49398cc285eeda03d54365cffd666cc7",
+      "group_assignment_sha256": "e9b51165da2342ce68fc7ea20fe9371fed704af502c20274172c8bde588a50c0",
+      "groups": {
+        "contradictory_label_groups": 0,
+        "count": 1348,
+        "multi_row_groups": 11
+      },
+      "id_removal": "source has no identifier column; original row index discarded",
+      "label_conversion": "column 5 label used as-is; verified values in {0,1}",
+      "license": "CC BY 4.0",
+      "rows": 1372,
+      "sklearn_version": "1.6.1",
+      "split_folds": {
+        "final": 4,
+        "train": [
+          0,
+          1,
+          2
+        ],
+        "validation": 3
+      },
+      "split_seed": 20261277,
+      "splits": {
+        "final": {
+          "class_counts": {
+            "0": 155,
+            "1": 121
+          },
+          "rows": 276
+        },
+        "train": {
+          "class_counts": {
+            "0": 461,
+            "1": 366
+          },
+          "rows": 827
+        },
+        "validation": {
+          "class_counts": {
+            "0": 146,
+            "1": 123
+          },
+          "rows": 269
+        }
+      },
+      "task_binding": {
+        "features": 4,
+        "final_features_sha256": "9a66c88ec675de55c9fddb13410b2c0c01cb9abaf14da5431bdf76557b013906",
+        "final_labels_sha256": "09f925e28a61c1f1112f0b51e6a004dcc410aa86265eb3a63b8f6e55abb8cecf",
+        "rows": 1372,
+        "split_seed": 20261277,
+        "task_id": "banknote",
+        "train_csv_sha256": "c8a63bf422ef995bc145898cfea0df816498ebf81709fcff9991a5745126e37e",
+        "validation_features_sha256": "9fbc8daa26c1958d0dfa18963becc546466afa3a19927bffbae111444f830010",
+        "validation_labels_sha256": "1403bdfeb94a2b6b52361f2dcff4f80caecbf351228d0ac4701818caa291de69"
+      },
+      "task_binding_identity": "85a1f3b619cf37e1c4733957809e7bf7492c09a68f9d6b2db7d17fb933902e4e",
+      "uci_id": 267,
+      "url": "https://archive.ics.uci.edu/static/public/267/banknote%2Bauthentication.zip"
+    },
+    "spambase": {
+      "archive": {
+        "member": "spambase.data",
+        "member_sha256": "b1ef93de71f97714d3d7d4f58fc9f718da7bbc8ac8a150eff2778616a8097b12",
+        "name": "spambase.zip",
+        "sha256": "813ac1df8effac70463c09c9c4b11e8803eefcab54771af66150852bcdcd1636"
+      },
+      "class_counts": {
+        "0": 2788,
+        "1": 1813
+      },
+      "features": 57,
+      "files": {
+        "research/comparison/sealed/spambase/canonical.csv": "4d8bef5afc060bc91fa74859f175ec98735cd82f68ecbeb8fa9955c65431404d",
+        "research/comparison/sealed/spambase/final_features.csv": "f874a6ade257e761cde636088a2e03edf124a65976d9595d15debc7874ae387c",
+        "research/comparison/sealed/spambase/final_labels.csv": "8018ccb9ebf185d11fe0840b163a4771364c475fd1d4fa0c1a292a6a857f75d6",
+        "research/comparison/sealed/spambase/trainval.csv": "1effb815bd3b23a3bbf0302ff07d72633a6c79d2e4e900019f08351e23d42e7e",
+        "research/evaluator/tasks/comparison_spambase/validation_answer.csv": "aaf56f1c52a90c2fe53af68b348d2ebd460b94fa04fbdf5f313d80b266bd1e9f",
+        "tasks/comparison/spambase/data/public/sample_submission.csv": "066f8a17688b4f5dde347097c26fcd4b233e1c65196af9cd761cf90822af12ac",
+        "tasks/comparison/spambase/data/public/test.csv": "de2a91bb2be65de95011a5cf2700c87ee6ceb944eafa1d415ae167a1936934cd",
+        "tasks/comparison/spambase/data/public/train.csv": "baa13930bc2d3a95a82f28b98b6d5a3cf8ea150fb08a02cdb666533aa404ee81"
+      },
+      "fold_assignment_sha256": "31c33f47eb9165ae578e5f227d9f84bb7c0f9a5c91e124f221584d65866d7258",
+      "group_assignment_sha256": "455e9a2f9d1a44c1800b34923cfd0bb478180bdb0a79ebccc053dbfa038e2bc9",
+      "groups": {
+        "contradictory_label_groups": 3,
+        "count": 4207,
+        "multi_row_groups": 183
+      },
+      "id_removal": "source has no identifier column; original row index discarded",
+      "label_conversion": "column 58 label used as-is; verified values in {0,1}",
+      "license": "CC BY 4.0",
+      "rows": 4601,
+      "sklearn_version": "1.6.1",
+      "split_folds": {
+        "final": 4,
+        "train": [
+          0,
+          1,
+          2
+        ],
+        "validation": 3
+      },
+      "split_seed": 20261104,
+      "splits": {
+        "final": {
+          "class_counts": {
+            "0": 591,
+            "1": 375
+          },
+          "rows": 966
+        },
+        "train": {
+          "class_counts": {
+            "0": 1641,
+            "1": 1077
+          },
+          "rows": 2718
+        },
+        "validation": {
+          "class_counts": {
+            "0": 556,
+            "1": 361
+          },
+          "rows": 917
+        }
+      },
+      "task_binding": {
+        "features": 57,
+        "final_features_sha256": "f874a6ade257e761cde636088a2e03edf124a65976d9595d15debc7874ae387c",
+        "final_labels_sha256": "8018ccb9ebf185d11fe0840b163a4771364c475fd1d4fa0c1a292a6a857f75d6",
+        "rows": 4601,
+        "split_seed": 20261104,
+        "task_id": "spambase",
+        "train_csv_sha256": "baa13930bc2d3a95a82f28b98b6d5a3cf8ea150fb08a02cdb666533aa404ee81",
+        "validation_features_sha256": "de2a91bb2be65de95011a5cf2700c87ee6ceb944eafa1d415ae167a1936934cd",
+        "validation_labels_sha256": "aaf56f1c52a90c2fe53af68b348d2ebd460b94fa04fbdf5f313d80b266bd1e9f"
+      },
+      "task_binding_identity": "bc8bdb873a8a1f15cd53df86f976c9638b4ab642aca9c8e2b2ae402d233faabc",
+      "uci_id": 94,
+      "url": "https://archive.ics.uci.edu/static/public/94/spambase.zip"
+    },
+    "wdbc": {
+      "archive": {
+        "member": "wdbc.data",
+        "member_sha256": "d606af411f3e5be8a317a5a8b652b425aaf0ff38ca683d5327ffff94c3695f4a",
+        "name": "breast+cancer+wisconsin+diagnostic.zip",
+        "sha256": "bc154869ef13f753f9e2b5a17e248cfe1ba4b6721db7c4da9f4880e40b05d3af"
+      },
+      "class_counts": {
+        "0": 357,
+        "1": 212
+      },
+      "features": 30,
+      "files": {
+        "research/comparison/sealed/wdbc/canonical.csv": "9201dc698bc8276d916ffc3ad837a2cbfa846af781f02f9a30e7ad18204e5635",
+        "research/comparison/sealed/wdbc/final_features.csv": "eda808735394e04efa1808b8728da06435906efce7110eb5f273293519a66757",
+        "research/comparison/sealed/wdbc/final_labels.csv": "e1cbed4040ee9a6fceb2acf02e1beaf19d4aa7436f5852aa2c92f964d051f884",
+        "research/comparison/sealed/wdbc/trainval.csv": "6169964c2898fb5d737deeee29e8b2a7ca96a4822e95b1a74e5ba9fb61beeb25",
+        "research/evaluator/tasks/comparison_wdbc/validation_answer.csv": "5fae7e419c9757e9295899d2e25a33a8c2f3376b460c21635a25abc7ce5519e6",
+        "tasks/comparison/wdbc/data/public/sample_submission.csv": "b25ce6b5458374354e8bd2992a854baf664dbf04cc0a2c6246e7c40495cfc893",
+        "tasks/comparison/wdbc/data/public/test.csv": "7df7fb4e153c60f4addb6a5cee32a57943bdf136d3b8ebc03ed6664bc5b244ae",
+        "tasks/comparison/wdbc/data/public/train.csv": "720a22c6c3a6f60af73b24ff882ad7b710ef90bcded2dce4bbd7673422ae656c"
+      },
+      "fold_assignment_sha256": "84eadfc41a840a05981edb97c21c56788a6e04b3e953bc257433ff5d0fd54e61",
+      "group_assignment_sha256": "7073167caab9226879d7c622bc9bc5aca8b2d9655b730af48db14885b234a115",
+      "groups": {
+        "contradictory_label_groups": 0,
+        "count": 569,
+        "multi_row_groups": 0
+      },
+      "id_removal": "original WDBC id column removed; original row index discarded",
+      "label_conversion": "diagnosis column mapped B=0, M=1",
+      "license": "CC BY 4.0",
+      "rows": 569,
+      "sklearn_version": "1.6.1",
+      "split_folds": {
+        "final": 4,
+        "train": [
+          0,
+          1,
+          2
+        ],
+        "validation": 3
+      },
+      "split_seed": 20261027,
+      "splits": {
+        "final": {
+          "class_counts": {
+            "0": 74,
+            "1": 39
+          },
+          "rows": 113
+        },
+        "train": {
+          "class_counts": {
+            "0": 213,
+            "1": 129
+          },
+          "rows": 342
+        },
+        "validation": {
+          "class_counts": {
+            "0": 70,
+            "1": 44
+          },
+          "rows": 114
+        }
+      },
+      "task_binding": {
+        "features": 30,
+        "final_features_sha256": "eda808735394e04efa1808b8728da06435906efce7110eb5f273293519a66757",
+        "final_labels_sha256": "e1cbed4040ee9a6fceb2acf02e1beaf19d4aa7436f5852aa2c92f964d051f884",
+        "rows": 569,
+        "split_seed": 20261027,
+        "task_id": "wdbc",
+        "train_csv_sha256": "720a22c6c3a6f60af73b24ff882ad7b710ef90bcded2dce4bbd7673422ae656c",
+        "validation_features_sha256": "7df7fb4e153c60f4addb6a5cee32a57943bdf136d3b8ebc03ed6664bc5b244ae",
+        "validation_labels_sha256": "5fae7e419c9757e9295899d2e25a33a8c2f3376b460c21635a25abc7ce5519e6"
+      },
+      "task_binding_identity": "2343a2b6f8063009d1a86f3599001adf2274ecf8a83d1a1806026e3483b0f25f",
+      "uci_id": 17,
+      "url": "https://archive.ics.uci.edu/static/public/17/breast%2Bcancer%2Bwisconsin%2Bdiagnostic.zip"
+    }
+  }
+}

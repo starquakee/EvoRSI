@@ -698,6 +698,159 @@ def test_staging_session_is_not_wrapped(monkeypatch):
     assert spawned[0].argv == ["/bin/bash", "-c", "echo hi"]
 
 
+# --- EXP-003: narrowed trusted read grants -------------------------------------
+
+
+def _grant_config(tmp_path):
+    """Guard-active config with a tmp-backed pinned grant leaf."""
+    config, scratch, job_root, code_dir = _guard_config(tmp_path)
+    data_root = tmp_path / "mnt" / "rsi_data"
+    public = data_root / "hello_synth" / "data" / "public"
+    public.mkdir(parents=True)
+    config.read_grant_leaves = (str(public),)
+    return config, scratch, job_root, code_dir, public
+
+
+def test_validate_read_grants_fail_closed(tmp_path):
+    config, scratch, job_root, code_dir, public = _grant_config(tmp_path)
+    # Valid exact grant passes once; duplicates collapse.
+    grants, err = worker.validate_read_grants([str(public), str(public)], config)
+    assert err is None and grants == [str(public)]
+    # Absent/empty grants are allowed (candidate then gets NO public data).
+    assert worker.validate_read_grants(None, config) == ([], None)
+    assert worker.validate_read_grants([], config) == ([], None)
+    cases = [
+        ("not-a-list", "invalid_read_grants"),
+        ([str(public)] * (worker.MAX_READ_GRANTS + 1), "invalid_read_grants"),
+        (["relative/path"], "read_grant_not_canonical"),
+        ([str(public) + "/"], "read_grant_not_canonical"),
+        ([str(public) + "/../public"], "read_grant_not_canonical"),
+    ]
+    for raw, reason in cases:
+        grants, err = worker.validate_read_grants(raw, config)
+        assert grants is None and err == reason, (raw, err)
+    # Exact-leaf policy: parents, unregistered task-shaped paths, children
+    # of a leaf and foreign roots are refused (existence irrelevant — the
+    # leaf check precedes the filesystem check).
+    data_root = Path(config.read_grant_leaves[0]).parents[2]
+    (data_root / "unregistered" / "data" / "public").mkdir(parents=True)
+    (public / "child").mkdir()
+    for bad in (
+        str(data_root),
+        str(data_root / "hello_synth"),
+        str(data_root / "unregistered" / "data" / "public"),
+        str(public / "child"),
+        "/mnt/rsi_data/comparison/banknote/data/public",  # pinned but not THIS config's leaf
+        "/etc",
+    ):
+        grants, err = worker.validate_read_grants([bad], config)
+        assert grants is None and err == "read_grant_not_allowlisted", (bad, err)
+    # An allowlisted leaf that does not exist fails closed as not_found.
+    config.read_grant_leaves = (str(public / "absent"),)
+    grants, err = worker.validate_read_grants([str(public / "absent")], config)
+    assert grants is None and err == "read_grant_not_found"
+    config.read_grant_leaves = (str(public),)
+    # Grants inside the writable scratch tree are refused.
+    grants, err = worker.validate_read_grants([str(scratch / "jobs-candidate-v1")], config)
+    assert err == "read_grant_inside_scratch"
+    # Symlink alias inside the data root is resolved away and refused.
+    target = tmp_path / "secret"
+    target.mkdir()
+    alias = Path(config.read_grant_leaves[0]).parent / "alias"
+    alias.symlink_to(target)
+    config.read_grant_leaves = (str(alias),)
+    grants, err = worker.validate_read_grants([str(alias)], config)
+    assert err == "read_grant_symlink"
+    config.read_grant_leaves = (str(public),)
+
+
+def test_validate_read_grants_rejects_multiple_distinct_grants(tmp_path):
+    config, scratch, job_root, code_dir, public = _grant_config(tmp_path)
+    other = tmp_path / "mnt" / "rsi_data" / "wdbc" / "data" / "public"
+    other.mkdir(parents=True)
+    config.read_grant_leaves = (str(public), str(other))
+    grants, err = worker.validate_read_grants([str(public), str(other)], config)
+    assert grants is None and err == "conflicting_read_grants"
+
+
+def test_exec_read_grants_validation_and_trampoline_wiring(tmp_path, monkeypatch):
+    config, scratch, job_root, code_dir, public = _grant_config(tmp_path)
+    server, thread, url = _serve_with_config(config)
+    try:
+        base = {"id": "", "command": "echo hi", "exec_dir": str(code_dir),
+                "job_root": str(job_root), "async_mode": True, "timeout": 30}
+        # Staging sessions must not carry candidate read grants.
+        status, payload = _post(url, "/v1/shell/exec", {
+            "id": "", "command": "echo s", "exec_class": "staging",
+            "read_grants": [str(public)], "async_mode": True, "timeout": 30})
+        assert (status, payload["error"]) == (400, "read_grants_candidate_only")
+        # Invalid grants are refused before spawn with machine-readable reasons.
+        for grants, reason in (
+            ("/mnt/rsi_data", "invalid_read_grants"),
+            (["/mnt/rsi_data"], "read_grant_not_allowlisted"),
+            (["/mnt/rsi_data/../rsi_storage"], "read_grant_not_canonical"),
+            (["/mnt/rsi_data/comparison/sealed"], "read_grant_not_allowlisted"),
+            (["/etc"], "read_grant_not_allowlisted"),
+        ):
+            status, payload = _post(url, "/v1/shell/exec", {**base, "read_grants": grants})
+            assert (status, payload["error"]) == (400, reason), (grants, payload)
+        # A valid grant is accepted; the session runs.
+        status, payload = _post(url, "/v1/shell/exec", {**base, "read_grants": [str(public)]})
+        assert status == 200, payload
+        _wait_done(url, payload["data"]["session_id"])
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_candidate_session_passes_grants_as_trampoline_argv(monkeypatch, tmp_path):
+    spawned: list = []
+
+    def fake_popen(argv, **kwargs):
+        proc = _FakePopen(list(argv), **kwargs)
+        spawned.append(proc)
+        return proc
+
+    monkeypatch.setattr(worker.subprocess, "Popen", fake_popen)
+    config = make_config(guard_active=True, sweeper=lambda: True, scratch_root="/scratch")
+    config.spawn_with_privilege_drop = True
+    registry = worker.SessionRegistry(config)
+    session = worker.Session(
+        "s-grant", "echo hi", "/scratch/job/code", config, registry,
+        exec_class=worker.EXEC_CLASS_CANDIDATE, job_root="/scratch/job",
+        read_grants=["/mnt/rsi_data/hello_synth/data/public"],
+    )
+    session.start()
+    assert session.poll_done(10.0)
+    argv = spawned[0].argv
+    assert argv == [
+        "python3", "-I", "-S", worker.TRAMPOLINE_PATH,
+        "--job-root", "/scratch/job",
+        "--read-grant", "/mnt/rsi_data/hello_synth/data/public",
+        "--", "/bin/bash", "-c", "echo hi",
+    ]
+    # Grants travel as trampoline argv only, never via the candidate env.
+    assert not any("rsi_data" in key or "rsi_data" in str(value)
+                   for key, value in spawned[0].kwargs["env"].items())
+
+
+def test_exec_without_read_grants_field_unchanged(tmp_path):
+    config, scratch, job_root, code_dir = _guard_config(tmp_path)
+    server, thread, url = _serve_with_config(config)
+    try:
+        status, payload = _post(url, "/v1/shell/exec", {
+            "id": "", "command": "echo plain", "exec_dir": str(code_dir),
+            "job_root": str(job_root), "async_mode": True, "timeout": 30})
+        assert status == 200, payload
+        data = _wait_done(url, payload["data"]["session_id"])
+        assert data["status"] == "completed"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
 def test_execution_confinement_guard_fails_closed(tmp_path):
     trampoline = REPO_ROOT / "deploy" / "rsi-trustworthy" / "worker" / "exec_trampoline.py"
     # Real trampoline present + ABI >= 3 available -> passes.

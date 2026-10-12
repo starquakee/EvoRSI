@@ -360,8 +360,6 @@ class SandboxAcceptanceTask:
             "reason": scoring_result,
             "evidence_verified": scored,
             "evidence_mismatch": mismatch,
-            "source_identity_verified": body.get("source_identity_verified") is True,
-            "worker_cleanup_verified": body.get("worker_cleanup_verified") is True,
             "completed_at_proven": bool(
                 isinstance(raw.get("completed_at"), str) and raw.get("completed_at")
             ),
@@ -372,10 +370,19 @@ class SandboxAcceptanceTask:
                     "task_id", "split", "metric", "direction", "score",
                     "row_count", "prediction_sha256", "answer_sha256",
                     "registry_version", "reason", "prediction_snapshot",
+                    "evaluator",
                 )
                 if key in evaluation
             },
         }
+        # Persist the ACTUAL trusted facts, preserving the difference between
+        # an explicit False (trusted-stack contradiction on an executed job)
+        # and an absent key (never-submitted / pre-gate outcome): only an
+        # explicit value is recorded, so downstream verification can still
+        # distinguish the two instead of a coerced always-present boolean.
+        for fact_key in ("source_identity_verified", "worker_cleanup_verified"):
+            if fact_key in body:
+                evidence[fact_key] = body[fact_key] is True
         self.jobs.append(evidence)
         if scored:
             assert score_value is not None

@@ -34,9 +34,15 @@ Security model (batch-2 repair):
     container-wide and inherited. Candidate sessions (the default
     exec_class) are routed through the trusted pre-exec trampoline
     (exec_trampoline.py): after the uid drop it applies Landlock
-    (read/exec system roots, read-only public input, read-write ONLY
-    the current job scratch root) plus a narrow seccomp filter denying
-    the chmod/chown metadata-mutation family, then execs the command.
+    (read/exec system roots, read-write ONLY on the current job scratch
+    root, plus read-only ONLY on the exact validated read grants passed
+    as trampoline argv — EXP-003 narrowed grants; there is no broad
+    /mnt/rsi_data or /mnt/rsi_storage candidate read root any more) plus
+    a narrow seccomp filter denying the chmod/chown metadata-mutation
+    family, then execs the command. Read grants arrive exclusively via
+    the authenticated control channel (``read_grants`` exec metadata,
+    dispatcher-derived from the pinned registry mapping), never from
+    candidate-supplied environment or arbitrary data paths.
     Only dispatcher-generated, control-key-authenticated staging
     sessions (exec_class=staging) run without the trampoline; candidate
     code can never reach this API to forge one.
@@ -95,6 +101,27 @@ TRAMPOLINE_PATH = "/opt/rsi_worker/exec_trampoline.py"
 MIN_LANDLOCK_ABI = 3
 EXEC_CLASS_CANDIDATE = "candidate"
 EXEC_CLASS_STAGING = "staging"
+# Narrowed candidate read grants (EXP-003): the exact pinned task data
+# leaves trusted control metadata may grant read-only access to. Grants are
+# validated here and re-validated by the trampoline; a parent directory, an
+# unregistered task-shaped path, a child of a leaf, or more than one
+# distinct task grant are all refused. Candidate-supplied environment or
+# arbitrary data paths can never widen them. The three data/final leaves
+# (EXP-006) serve only the post-barrier final phase; they stay empty until
+# the verified all-27-cell barrier publishes refit/final-feature bytes.
+DEFAULT_READ_GRANT_LEAVES = frozenset(
+    {
+        "/mnt/rsi_data/hello_synth/data/public",
+        "/mnt/rsi_data/comparison/banknote/data/public",
+        "/mnt/rsi_data/comparison/wdbc/data/public",
+        "/mnt/rsi_data/comparison/spambase/data/public",
+        "/mnt/rsi_data/comparison/banknote/data/final",
+        "/mnt/rsi_data/comparison/wdbc/data/final",
+        "/mnt/rsi_data/comparison/spambase/data/final",
+    }
+)
+MAX_READ_GRANTS = 8
+MAX_READ_GRANT_LENGTH = 512
 
 CAP_KILL = 5
 CAP_SETGID = 6
@@ -367,11 +394,55 @@ class WorkerConfig:
     spawn_with_privilege_drop: bool = field(default=False)
     scratch_root: str = DEFAULT_SCRATCH_ROOT
     trampoline_path: str = TRAMPOLINE_PATH
+    read_grant_leaves: Tuple[str, ...] = tuple(sorted(DEFAULT_READ_GRANT_LEAVES))
 
     def __post_init__(self) -> None:
         if not self.control_key:
             raise ValueError("control_key_required")
         self.spawn_with_privilege_drop = self.guard_active
+
+
+def validate_read_grants(raw: Any, config: WorkerConfig) -> Tuple[Optional[List[str]], Optional[str]]:
+    """Fail-closed validation of trusted per-candidate read grants.
+
+    Returns (grants, None) on success or (None, machine-readable reason).
+    Each grant must be a canonical absolute path that resolves (no symlink
+    components) EXACTLY to a pinned allowlisted task data leaf — never a
+    parent, never an unregistered task-shaped path, never a child of a
+    leaf — and never inside the writable scratch tree. At most one
+    distinct task grant is allowed per candidate session. Anything else
+    is refused before the candidate command is ever spawned.
+    """
+    if raw is None:
+        return [], None
+    if not isinstance(raw, list) or len(raw) > MAX_READ_GRANTS:
+        return None, "invalid_read_grants"
+    scratch_real = Path(os.path.realpath(config.scratch_root))
+    leaves = frozenset(config.read_grant_leaves)
+    grants: List[str] = []
+    for item in raw:
+        if not isinstance(item, str) or not item or len(item) > MAX_READ_GRANT_LENGTH:
+            return None, "invalid_read_grants"
+        normalized = os.path.normpath(item)
+        if normalized != item or not os.path.isabs(normalized):
+            return None, "read_grant_not_canonical"
+        real = os.path.realpath(normalized)
+        if real != normalized:
+            return None, "read_grant_symlink"
+        real_path = Path(real)
+        if real_path == scratch_real or scratch_real in real_path.parents:
+            return None, "read_grant_inside_scratch"
+        if real not in leaves:
+            return None, "read_grant_not_allowlisted"
+        if not real_path.is_dir():
+            return None, "read_grant_not_found"
+        if real not in grants:
+            grants.append(real)
+    if len(grants) > 1:
+        # A candidate job has exactly one current task: multiple distinct
+        # data grants are never legitimate.
+        return None, "conflicting_read_grants"
+    return grants, None
 
 
 class BoundedTail:
@@ -406,12 +477,14 @@ class Session:
         registry: "SessionRegistry",
         exec_class: str = EXEC_CLASS_CANDIDATE,
         job_root: Optional[str] = None,
+        read_grants: Optional[List[str]] = None,
     ) -> None:
         self.session_id = session_id
         self.command = command
         self.exec_dir = exec_dir
         self.exec_class = exec_class
         self.job_root = job_root
+        self.read_grants = list(read_grants) if read_grants else []
         self.config = config
         self.registry = registry
         self.created_at = time.time()
@@ -449,6 +522,9 @@ class Session:
                     # applied AFTER the C-level uid drop). The job_root was
                     # already proven contained under the scratch root by the
                     # exec handler; the trampoline re-proves it fail-closed.
+                    # Trusted read grants (validated by the exec handler)
+                    # travel as trampoline argv, never via the candidate
+                    # environment.
                     # -I -S: isolated interpreter, no site/user packages.
                     argv = [
                         "python3",
@@ -457,9 +533,10 @@ class Session:
                         self.config.trampoline_path,
                         "--job-root",
                         self.job_root or "",
-                        "--",
-                        *argv,
                     ]
+                    for grant in self.read_grants:
+                        argv.extend(["--read-grant", grant])
+                    argv.extend(["--", "/bin/bash", "-c", self.command])
             self._process = subprocess.Popen(
                 argv,
                 cwd=self.exec_dir or None,
@@ -606,6 +683,7 @@ class SessionRegistry:
         exec_dir: Optional[str],
         exec_class: str = EXEC_CLASS_CANDIDATE,
         job_root: Optional[str] = None,
+        read_grants: Optional[List[str]] = None,
     ) -> Session:
         with self._lock:
             if self.poisoned:
@@ -614,7 +692,9 @@ class SessionRegistry:
             if active:
                 raise RuntimeError("execution_slot_busy")
             self._evict_retained_locked()
-            session = Session(uuid.uuid4().hex, command, exec_dir, self.config, self, exec_class, job_root)
+            session = Session(
+                uuid.uuid4().hex, command, exec_dir, self.config, self, exec_class, job_root, read_grants
+            )
             self._sessions[session.session_id] = session
         try:
             session.start()
@@ -793,8 +873,19 @@ class WorkerHandler(BaseHTTPRequestHandler):
         if exec_class not in (EXEC_CLASS_CANDIDATE, EXEC_CLASS_STAGING):
             _json_response(self, 400, {"error": "invalid_exec_class"})
             return
-        job_root = body.get("job_root")
         config = self.server.worker_config
+        read_grants: Optional[List[str]] = []
+        if "read_grants" in body:
+            if exec_class != EXEC_CLASS_CANDIDATE:
+                # Trusted staging sessions are unconstrained by design;
+                # read grants are a candidate-only confinement concept.
+                _json_response(self, 400, {"error": "read_grants_candidate_only"})
+                return
+            read_grants, grant_error = validate_read_grants(body.get("read_grants"), config)
+            if grant_error is not None:
+                _json_response(self, 400, {"error": grant_error})
+                return
+        job_root = body.get("job_root")
         if config.guard_active and exec_class == EXEC_CLASS_CANDIDATE:
             # Candidate sessions ALWAYS execute through the trusted
             # trampoline, which needs a per-job write root positively
@@ -822,7 +913,9 @@ class WorkerHandler(BaseHTTPRequestHandler):
                 return
             job_root = str(job_real)
         try:
-            session = registry.create(command, exec_dir, exec_class=exec_class, job_root=job_root)
+            session = registry.create(
+                command, exec_dir, exec_class=exec_class, job_root=job_root, read_grants=read_grants
+            )
         except PoisonedError:
             _json_response(self, 503, {"error": "worker_cleanup_unproven"})
             return

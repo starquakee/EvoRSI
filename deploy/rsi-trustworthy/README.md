@@ -27,10 +27,13 @@
     专用；候选进程以非 root uid 65432 运行、无 capability、环境变量洗白、
     继承容器级 no-new-privileges）。镜像兼容性用完全相同的选项实测：
     torch 2.6.0+cu124 / RTX 4060 Ti / CUDA 张量运算 OK。
-  - 挂载：公共输入（jobs/uploads）只读 + 每任务 scratch
+  - 挂载：公共输入（jobs/uploads）只读 + 每任务公开数据目录只读
+    （hello_synth 与 comparison banknote/wdbc/spambase 各自的
+    `data/public`，EXP-003 起逐任务精确挂载）+ 每任务 scratch
     （`/mnt/local_sandbox_workdir`）可写 + 控制密钥文件只读
     （宿主 0600，容器 root 无 CAP_DAC_OVERRIDE 也读不到，候选 uid 更读不到）。
-    评测器注册表/答案树（`research/evaluator`）从不挂载进 worker。
+    评测器注册表/答案树（`research/evaluator`）与 comparison 密封树
+    （`research/comparison/sealed`）从不挂载进 worker。
   - 控制面认证（batch-2 修复）：`/v1/*` 全部要求 `X-RSI-Control-Key`。
     密钥由 supervisor 启动时通过 setuid 助手子进程读入内存（文件属宿主
     uid、0600）；候选进程既不能读密钥文件也不能读 supervisor 的
@@ -43,20 +46,35 @@
     新 exec 503，fail closed）。启动守卫校验 PID 1=本脚本、容器标记
     env、root euid、必需 capability、候选 uid 合法，任一失败即退出，
     因此 UID 扫描绝不可能在宿主机或错误命名空间运行。
-  - 候选文件系统隔离（US-008）：候选会话一律经
+  - 候选文件系统隔离（US-008 + EXP-003 收窄）：候选会话一律经
     `worker/exec_trampoline.py`（uid 降落之后、候选命令之前）执行——
-    Landlock ABI>=3（系统库只读执行、公共输入/数据只读、**仅当前任务
-    scratch 根可写**，不授予共享 /tmp、/dev/shm 或 scratch 父目录），
+    Landlock ABI>=3（系统库只读执行、**仅当前任务 scratch 根可写**，
+    不授予共享 /tmp、/dev/shm 或 scratch 父目录），
     叠加窄 seccomp 过滤器对 Landlock ABI3 不覆盖的元数据变更族
     （chmod/chown/utime/xattr 共 18 个调用）返回 EPERM，x32 ABI 号与
     非 x86_64 架构直接 KILL；exec 前关闭继承描述符，HOME/TMPDIR 改为
     任务本地目录。trampoline 不可用（文件缺失/ABI 过低/路径逃逸）时
     在 exec 之前失败关闭；worker 启动守卫同样校验 trampoline 存在且
-    ABI 达标。dispatcher 生成的可信 staging 会话（exec_class=staging，
+    ABI 达标。EXP-003 起不再有 `/mnt/rsi_data`、`/mnt/rsi_storage`
+    宽泛只读根：候选只读授权仅来自 dispatcher 依据评测器注册表固定
+    映射（task_id → worker_data_public_path）经认证控制通道下发的
+    `read_grants`，worker 与 trampoline 双层按**精确叶子白名单**
+    （4 个任务 data/public 目录 + EXP-006 起 3 个 comparison
+    data/final 终阶段叶子）校验——父目录、未注册任务形路径、
+    叶子子路径、符号链接别名、跨任务多授权一律拒绝；候选提交的
+    data_dir/environment 只被对照校验，绝不作为授权依据。
+    data/final 叶子的宿主机来源是**未入 Git 的运行时发布目录**
+    `.runtime/comparison-istratde/final-publication/<task>/data/final`
+    （EXP-006 起；tracked 搜索数据与注册表保持字节不变），在全部
+    27 格冻结屏障核验通过并进入不可逆终阶段前不存在最终字节；
+    最终标签永不挂载进 worker。
+    dispatcher 生成的可信 staging 会话（exec_class=staging，
     控制密钥认证）不走 trampoline；候选代码无法访问控制 API 伪造类别。
     跨任务读/写/chmod/utime/符号链接别名实测全部被拒
-    （probe_us008.py；修复 .runtime/cross-job-boundary-review.json
-    记录的实证漏洞）。DELETE 会话只在清理已证明时返回 200
+    （probe_us008.py；EXP-003 收窄后跨任务数据、跨任务存储
+    source/prediction canary、密封树、遍历别名实测全部被拒见
+    probe_exp003_grants.py 与 reports/exp003-narrowed-grants.json）。
+    DELETE 会话只在清理已证明时返回 200
     `cleanup_verified=true`，否则 503；dispatcher 的 kill/cleanup 消费
     该确认，超时/取消结果只在已证明时写 `completed_at`；会话失踪
     （404）不算清理证据。API 对仍在队列的取消用真实 Redis LREM 结果
@@ -71,6 +89,17 @@
     scratch 宿主目录必须 0777（init_auth.sh 已处理；validate 有真实写探针）。
 - 评分：dispatcher 侧外部可信评测器（US-005），候选进程停止后从
   不可变 prediction_snapshot.csv 评分；worker 命令流不接触答案/评测代码。
+  注册表在 dispatcher 启动时从 `EVALUATOR_REGISTRY_PATH` 加载一次
+  （EXP-007 起经 `${RSI_EVALUATOR_REGISTRY_PATH:-...}` 注入，默认仍是
+  tracked 搜索注册表 `/opt/rsi_repo/research/evaluator/registry.v1.json`）。
+  终阶段（EXP-006/007）使用独立的阶段注册表：运行时发布根
+  `.runtime/comparison-istratde/final-publication` 以只读挂载到
+  dispatcher 的 `/opt/rsi_final`（仅 dispatcher；worker 永不挂载答案），
+  其中 `registry.final.v1.json` 与私有最终答案在 27 格屏障核验发布后才存在。
+  仅在栈空闲时重建 dispatcher 单个服务完成阶段切换（
+  `RSI_EVALUATOR_REGISTRY_PATH=/opt/rsi_final/registry.final.v1.json
+  docker compose up -d dispatcher`，切回搜索阶段省略该变量同样重建），
+  tracked 搜索注册表与搜索数据字节不变。
 - 源码身份绑定（batch-2 修复）：dispatcher 在 staging 之后、执行之前校验
   准入闸证据（`source_gate`：policy_version/policy_sha256/source 或
   entrypoint sha256），与当前加载策略和实际 staged 字节比对；缺失/不一致

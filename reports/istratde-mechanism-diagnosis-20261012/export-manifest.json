@@ -1,0 +1,30 @@
+{
+  "schema": "mechanism-diagnosis-export.v1",
+  "files": [
+    {
+      "name": "parent-selections.csv",
+      "original_sha256": "57308e315563ae713f6ba5ff809b252533f9ac606ca2f2bd1a687c4ee418886e",
+      "export_sha256": "57308e315563ae713f6ba5ff809b252533f9ac606ca2f2bd1a687c4ee418886e"
+    },
+    {
+      "name": "diagnosis.json",
+      "original_sha256": "7465f9682d6ea7117abce9e9537a08fe9333b274f363cf9498e0032f046af47e",
+      "export_sha256": "7465f9682d6ea7117abce9e9537a08fe9333b274f363cf9498e0032f046af47e"
+    },
+    {
+      "name": "runs-216.csv",
+      "original_sha256": "bef5065a7e0a56645dd04837b8ba428fd7ec42fd077549de074daadb58f7312c",
+      "export_sha256": "bef5065a7e0a56645dd04837b8ba428fd7ec42fd077549de074daadb58f7312c"
+    },
+    {
+      "name": "source-binding.json",
+      "original_sha256": "c5adc86bc452d07d63ab59c9231bd1cee5e11ca1824c17e9b6fd68d57917c37f",
+      "export_sha256": "c5adc86bc452d07d63ab59c9231bd1cee5e11ca1824c17e9b6fd68d57917c37f"
+    },
+    {
+      "name": "operator-events.csv",
+      "original_sha256": "d4a316ab5bf28c17ff67a3b2475dd679a98b252d9dbdbfea37d5fdcf546711b7",
+      "export_sha256": "d4a316ab5bf28c17ff67a3b2475dd679a98b252d9dbdbfea37d5fdcf546711b7"
+    }
+  ]
+}

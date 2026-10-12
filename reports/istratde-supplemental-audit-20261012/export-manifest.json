@@ -1,0 +1,21 @@
+{
+  "schema": "comparison-supplemental-export.v1",
+  "redaction": "Local repository/home path prefixes only; no credentials, model prompts/responses or raw job logs.",
+  "files": [
+    {
+      "name": "audit.json",
+      "original_sha256": "19dc2931651ee9830f1a348a1b0adc1233d3146d61f99f2bfc00444a9f944dbe",
+      "export_sha256": "19dc2931651ee9830f1a348a1b0adc1233d3146d61f99f2bfc00444a9f944dbe"
+    },
+    {
+      "name": "event-replay.json",
+      "original_sha256": "c0572ff4c2c3c5f7e036e77f702060db6a8b537790445dbfcc1bda9cbce03054",
+      "export_sha256": "c0572ff4c2c3c5f7e036e77f702060db6a8b537790445dbfcc1bda9cbce03054"
+    },
+    {
+      "name": "clock-exception-validator.py.txt",
+      "original_sha256": "7a4e157f86017f06ac046164b2ae29efee578ea8de70fcf1a4b20ecc6cf82786",
+      "export_sha256": "7a4e157f86017f06ac046164b2ae29efee578ea8de70fcf1a4b20ecc6cf82786"
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "schema": "comparison-independent-event-replay.v1",
+  "original_ledger_sha256": "b832658b09995146d7e06824a998853ee9cfdba531516843b9d8df2e74634a9c",
+  "events_replayed": 2627,
+  "unique_requests": 1312,
+  "all_historical_reservation_caps_respected": true,
+  "event_timestamps_nondecreasing": true,
+  "global_peaks": {
+    "committed_plus_reserved_requests": 1312,
+    "committed_plus_reserved_tokens": 2742193,
+    "simultaneous_model_reservations": 1
+  },
+  "cell_peaks": {
+    "banknote:11:FIXED": {
+      "requests": 48,
+      "tokens": 98433
+    },
+    "banknote:11:RANDOM": {
+      "requests": 48,
+      "tokens": 102573
+    },
+    "banknote:11:ISTRATDE": {
+      "requests": 49,
+      "tokens": 102264
+    },
+    "banknote:22:RANDOM": {
+      "requests": 49,
+      "tokens": 101687
+    },
+    "banknote:22:ISTRATDE": {
+      "requests": 48,
+      "tokens": 97993
+    },
+    "banknote:22:FIXED": {
+      "requests": 48,
+      "tokens": 103526
+    },
+    "banknote:33:ISTRATDE": {
+      "requests": 49,
+      "tokens": 100164
+    },
+    "banknote:33:FIXED": {
+      "requests": 48,
+      "tokens": 97911
+    },
+    "banknote:33:RANDOM": {
+      "requests": 48,
+      "tokens": 92797
+    },
+    "wdbc:11:FIXED": {
+      "requests": 48,
+      "tokens": 115214
+    },
+    "wdbc:11:RANDOM": {
+      "requests": 48,
+      "tokens": 111537
+    },
+    "wdbc:11:ISTRATDE": {
+      "requests": 48,
+      "tokens": 105317
+    },
+    "wdbc:22:RANDOM": {
+      "requests": 50,
+      "tokens": 118663
+    },
+    "wdbc:22:ISTRATDE": {
+      "requests": 49,
+      "tokens": 120604
+    },
+    "wdbc:22:FIXED": {
+      "requests": 49,
+      "tokens": 116010
+    },
+    "wdbc:33:ISTRATDE": {
+      "requests": 51,
+      "tokens": 128592
+    },
+    "wdbc:33:FIXED": {
+      "requests": 48,
+      "tokens": 118372
+    },
+    "wdbc:33:RANDOM": {
+      "requests": 49,
+      "tokens": 118490
+    },
+    "spambase:11:FIXED": {
+      "requests": 49,
+      "tokens": 129011
+    },
+    "spambase:11:RANDOM": {
+      "requests": 49,
+      "tokens": 117715
+    },
+    "spambase:11:ISTRATDE": {
+      "requests": 48,
+      "tokens": 116190
+    },
+    "spambase:22:RANDOM": {
+      "requests": 48,
+      "tokens": 126728
+    },
+    "spambase:22:ISTRATDE": {
+      "requests": 49,
+      "tokens": 133311
+    },
+    "spambase:22:FIXED": {
+      "requests": 50,
+      "tokens": 129348
+    },
+    "spambase:33:ISTRATDE": {
+      "requests": 48,
+      "tokens": 122641
+    },
+    "spambase:33:FIXED": {
+      "requests": 48,
+      "tokens": 120544
+    },
+    "spambase:33:RANDOM": {
+      "requests": 48,
+      "tokens": 121613
+    }
+  },
+  "actual_settled": {
+    "requests": 1312,
+    "tokens": 2728412,
+    "main": 1296,
+    "debug": 16
+  },
+  "requests_after_final_phase": 0,
+  "unknown_usage": 0,
+  "ledger_unchanged": true,
+  "canonical_audit_status_changed": false
+}

@@ -1,0 +1,168 @@
+{
+  "gateway": "http://127.0.0.1:6581",
+  "generated_at": "2026-10-10T15:43:01Z",
+  "probes": [
+    {
+      "detail": "legacy={'sandbox_api': {'id': '2f43f16b3a21', 'status': 'running', 'started_at': '2026-09-29T08:09:15.79152544Z'}, 'sandbox_dispatcher': {'id': '399601eddef7', 'status': 'running', 'started_at': '2026-09-29T15:18:43.646516469Z'}, 'sandbox_nginx': {'id': 'fe32eecd62af', 'status': 'running', 'started_at': '2026-09-29T08:09:15.775130785Z'}, 'sandbox_postgres': {'id': '6a2f0c6bc35c', 'status': 'running', 'started_at': '2026-09-29T08:09:15.794341944Z'}, 'sandbox_redis': {'id': 'a81df5e9dce4', 'status': 'running', 'started_at': '2026-09-29T08:09:15.788644723Z'}, 'ml-sandbox-gpu-0': {'id': 'ca177a4368f9', 'status': 'running', 'started_at': '2026-09-29T08:56:08.113386715Z'}} leftover_candidate_pids=[]",
+      "legacy": {
+        "ml-sandbox-gpu-0": {
+          "id": "ca177a4368f9",
+          "started_at": "2026-09-29T08:56:08.113386715Z",
+          "status": "running"
+        },
+        "sandbox_api": {
+          "id": "2f43f16b3a21",
+          "started_at": "2026-09-29T08:09:15.79152544Z",
+          "status": "running"
+        },
+        "sandbox_dispatcher": {
+          "id": "399601eddef7",
+          "started_at": "2026-09-29T15:18:43.646516469Z",
+          "status": "running"
+        },
+        "sandbox_nginx": {
+          "id": "fe32eecd62af",
+          "started_at": "2026-09-29T08:09:15.775130785Z",
+          "status": "running"
+        },
+        "sandbox_postgres": {
+          "id": "6a2f0c6bc35c",
+          "started_at": "2026-09-29T08:09:15.794341944Z",
+          "status": "running"
+        },
+        "sandbox_redis": {
+          "id": "a81df5e9dce4",
+          "started_at": "2026-09-29T08:09:15.788644723Z",
+          "status": "running"
+        }
+      },
+      "name": "precondition: stack idle, all six legacy containers running (identity recorded)",
+      "ok": true
+    },
+    {
+      "detail": "job=job_9adaf2c21f0d4958 status=completed score=0.45",
+      "job_id": "job_9adaf2c21f0d4958",
+      "name": "hello_synth benign job scores under narrowed grants (compatibility)",
+      "ok": true,
+      "score": 0.45
+    },
+    {
+      "detail": "job=job_52224e9c8c4e4f55 status=completed score=0.542751",
+      "evaluation": {
+        "answer_sha256": "1403bdfeb94a2b6b52361f2dcff4f80caecbf351228d0ac4701818caa291de69",
+        "direction": "maximize",
+        "evaluator": "external_trusted",
+        "metric": "accuracy",
+        "prediction_sha256": "bf410177d0c4405b2c188ac5eeefdea146fa6a09abcee29bdab9439b821e5bbe",
+        "prediction_snapshot": "/mnt/rsi_storage/mlsandbox/jobs/2026-10-10/banknote/job_52224e9c8c4e4f55/prediction_snapshot.csv",
+        "registry_version": "evaluator-registry.v1",
+        "row_count": 269,
+        "score": 0.542751,
+        "split": "validation",
+        "task_id": "comparison_banknote"
+      },
+      "job_id": "job_52224e9c8c4e4f55",
+      "name": "comparison_banknote job reads own task grant and scores (validation split)",
+      "ok": true,
+      "score": 0.542751
+    },
+    {
+      "detail": "probes={\"bundled_wdbc_opt\": \"masked_empty\", \"bundled_wdbc_usr\": \"masked_empty\", \"cross_job_prediction_canary\": \"denied:13\", \"cross_job_source_canary\": \"denied:13\", \"cross_task_banknote\": \"denied:13\", \"cross_task_parent\": \"denied:13\", \"evaluator_tree\": \"denied:2\", \"ordinary_estimator_on_granted_data\": \"REACHED\", \"own_task_train\": \"REACHED\", \"sealed_tree\": \"denied:2\", \"storage_tree_listdir\": \"denied:13\", \"symlink_alias_to_storage_canary\": \"denied:13\", \"traversal_alias_cross_task\": \"denied:13\", \"traversal_from_own_grant_upward\": \"denied:13\", \"wdbc_loader\": \"denied:StopIteration\"}",
+      "job_id": "job_ddc5ea9ca1b9469b",
+      "name": "candidate confined to own task grant: cross-task/cross-job/sealed/symlink/traversal denied",
+      "ok": true,
+      "probe_results": {
+        "bundled_wdbc_opt": "masked_empty",
+        "bundled_wdbc_usr": "masked_empty",
+        "cross_job_prediction_canary": "denied:13",
+        "cross_job_source_canary": "denied:13",
+        "cross_task_banknote": "denied:13",
+        "cross_task_parent": "denied:13",
+        "evaluator_tree": "denied:2",
+        "ordinary_estimator_on_granted_data": "REACHED",
+        "own_task_train": "REACHED",
+        "sealed_tree": "denied:2",
+        "storage_tree_listdir": "denied:13",
+        "symlink_alias_to_storage_canary": "denied:13",
+        "traversal_alias_cross_task": "denied:13",
+        "traversal_from_own_grant_upward": "denied:13",
+        "wdbc_loader": "denied:StopIteration"
+      },
+      "worker_cleanup_verified": true
+    },
+    {
+      "detail": "wdbc_usr=masked_empty wdbc_opt=masked_empty loader=denied:StopIteration estimator=REACHED",
+      "job_id": "job_ddc5ea9ca1b9469b",
+      "name": "bundled labeled WDBC masked: both CSV copies empty, sklearn loader blocked, estimator OK",
+      "ok": true
+    },
+    {
+      "detail": "canary_intact=True",
+      "name": "cross-job canary bytes intact after candidate probes",
+      "ok": true
+    },
+    {
+      "detail": "outcomes={\"broad_root\": [400, \"read_grant_not_allowlisted\"], \"foreign_root\": [400, \"read_grant_not_allowlisted\"], \"leaf_child\": [400, \"read_grant_not_allowlisted\"], \"parent_dir\": [400, \"read_grant_not_allowlisted\"], \"staging_with_grants\": [400, \"read_grants_candidate_only\"], \"traversal\": [400, \"read_grant_not_canonical\"], \"two_tasks\": [400, \"conflicting_read_grants\"], \"unregistered_task\": [400, \"read_grant_not_allowlisted\"]}",
+      "name": "worker refuses broad/parent/foreign/traversal/multi-task/staging grants (400, real API)",
+      "ok": true,
+      "outcomes": {
+        "broad_root": [
+          400,
+          "read_grant_not_allowlisted"
+        ],
+        "foreign_root": [
+          400,
+          "read_grant_not_allowlisted"
+        ],
+        "leaf_child": [
+          400,
+          "read_grant_not_allowlisted"
+        ],
+        "parent_dir": [
+          400,
+          "read_grant_not_allowlisted"
+        ],
+        "staging_with_grants": [
+          400,
+          "read_grants_candidate_only"
+        ],
+        "traversal": [
+          400,
+          "read_grant_not_canonical"
+        ],
+        "two_tasks": [
+          400,
+          "conflicting_read_grants"
+        ],
+        "unregistered_task": [
+          400,
+          "read_grant_not_allowlisted"
+        ]
+      }
+    },
+    {
+      "cleanup_verified": true,
+      "detail": "direct={\"granted_banknote\": \"REACHED\", \"other_task_hello\": \"denied:13\", \"other_task_wdbc\": \"denied:13\", \"storage_canary\": \"denied:13\"} session=completed",
+      "direct": {
+        "granted_banknote": "REACHED",
+        "other_task_hello": "denied:13",
+        "other_task_wdbc": "denied:13",
+        "storage_canary": "denied:13"
+      },
+      "name": "direct candidate session: exact grant readable, all other task/storage paths denied",
+      "ok": true
+    },
+    {
+      "detail": "leftover=[]",
+      "name": "post-cleanup: no candidate-uid processes remain in rsi_worker",
+      "ok": true
+    },
+    {
+      "detail": "",
+      "name": "synthetic canaries removed from storage tree",
+      "ok": true
+    }
+  ],
+  "story": "EXP-003",
+  "verdict": "PASS"
+}

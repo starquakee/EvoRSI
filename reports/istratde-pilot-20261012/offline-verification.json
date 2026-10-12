@@ -1,0 +1,53 @@
+{
+  "schema": "istratde-pilot-post-stop-offline-verification.v1",
+  "scope": "Future-only source corrections and synthetic regressions; does not repair or supersede the original FAIL experiment audit.",
+  "original_run_source_commit": "87569545793c141e393e72450094975733a2bb95",
+  "regressions_before_fix": {
+    "advancing_clock": "failed: state/event timestamps 1000.000015 vs 1000.00002",
+    "trusted_metric_ratio_111_over_113": "failed: final_score_recompute_mismatch at first synthetic final"
+  },
+  "regressions_after_fix": {
+    "command": ".venv-research/bin/python -m pytest -q research/tests/test_comparison_live_defects.py research/tests/test_comparison_budget.py research/tests/test_comparison_final_provenance_supervisor.py research/tests/test_comparison_final_write_supervisor.py research/tests/test_comparison_final_supervisor.py",
+    "exit_code": 0,
+    "passed": 72,
+    "duration_seconds": 100.9,
+    "coverage": [
+      "advancing-clock writer, read-only load and idempotent reopen",
+      "real trusted accuracy function, synthetic 111/113 final acceptance and at-most-once resume",
+      "budget boundaries, provenance contradictions, final-write and failure-closed regressions"
+    ]
+  },
+  "typecheck": {
+    "exit_code": 0,
+    "source_files": 169,
+    "config": "research/mypy.ini",
+    "note": "Existing configuration; untyped function bodies are not all checked."
+  },
+  "historical_evidence_audit": {
+    "exit_code": 0,
+    "rounds": 2,
+    "files_verified": 164,
+    "requests": 41,
+    "tokens": 131620
+  },
+  "visual_qa": {
+    "inspected_pngs": 6,
+    "forensic_figures_readable": true,
+    "canonical_plot_limitation": "Two original cost plots collapse to zero when ledger validation fails; retained only as historical snapshots. Three supplemental figures are the user-facing charts."
+  },
+  "original_evidence_unchanged": true,
+  "original_ledger_sha256": "b832658b09995146d7e06824a998853ee9cfdba531516843b9d8df2e74634a9c",
+  "new_model_requests_after_stop": 0,
+  "new_sandbox_evaluations_after_stop": 0,
+  "final_cleanup_registries": {
+    "checked": 226,
+    "all_empty": true
+  },
+  "secret_audit": {
+    "scanned_tracked_text_files": 1030,
+    "secret_findings": 0,
+    "host_path_violations": 0,
+    "exit_code": 0
+  },
+  "export_original_and_redacted_hashes_verified": 22
+}

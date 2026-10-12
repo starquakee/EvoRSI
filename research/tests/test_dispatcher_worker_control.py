@@ -299,9 +299,10 @@ def scratch_harness(monkeypatch, tmp_path):
     exec_calls: list[dict] = []
 
     def fake_exec(*, worker_endpoint, command, exec_dir, job_id, redis_client, db_conn,
-                  job_deadline, on_started=None, exec_class=None, job_root=None):
+                  job_deadline, on_started=None, exec_class=None, job_root=None, read_grants=None):
         commands.append(command)
-        exec_calls.append({"command": command, "exec_class": exec_class, "job_root": job_root})
+        exec_calls.append({"command": command, "exec_class": exec_class, "job_root": job_root,
+                           "read_grants": read_grants})
         if on_started is not None:
             on_started("fake-session")
         return td.SandboxResultWrapper(
@@ -340,7 +341,7 @@ def _make_job(tmp_path: Path, evidence: object) -> dict:
         "task_id": "hello_synth",
         "code_file_path": str(code_file),
         "job_storage_dir": str(job_dir),
-        "data_dir": "/data/hello_synth",
+        "data_dir": "/mnt/rsi_data/hello_synth",
         "environment": {"EXECUTION_MODE": "shell"},
         "timeout": 600,
     }
@@ -398,6 +399,109 @@ def test_execute_job_with_matching_identity_runs_and_scores(scratch_harness):
     stage_call, candidate_call = scratch_harness["exec_calls"]
     assert stage_call["exec_class"] == "staging"
     assert stage_call["job_root"] is None
+    assert stage_call["read_grants"] is None  # staging is never granted
     assert candidate_call["exec_class"] == "candidate"
     expected_root = str(td.local_job_root("job-identity", scratch_harness["tmp"] / "job-identity"))
     assert candidate_call["job_root"] == expected_root
+    # EXP-003: the candidate gets exactly the pinned registry grant, and
+    # DATA_DIR is exported from that trusted path, not from candidate input.
+    assert candidate_call["read_grants"] == ["/mnt/rsi_data/hello_synth/data/public"]
+    assert "export DATA_DIR=/mnt/rsi_data/hello_synth/data/public" in candidate_call["command"]
+
+
+# --- EXP-003: trusted narrowed data grants (fail closed) --------------------
+
+
+def test_resolve_worker_data_grant_pinned_mapping():
+    registry = td.EXTERNAL_EVALUATOR_REGISTRY
+    assert registry is not None
+    for task_id, pinned in (
+        ("hello_synth", "/mnt/rsi_data/hello_synth/data/public"),
+        ("comparison_banknote", "/mnt/rsi_data/comparison/banknote/data/public"),
+        ("comparison_wdbc", "/mnt/rsi_data/comparison/wdbc/data/public"),
+        ("comparison_spambase", "/mnt/rsi_data/comparison/spambase/data/public"),
+    ):
+        grant, err = td.resolve_worker_data_grant(registry, {"task_id": task_id})
+        assert err is None and grant == pinned, task_id
+        # Declaring the matching data_dir or the pinned dir itself is fine.
+        grant2, err2 = td.resolve_worker_data_grant(
+            registry, {"task_id": task_id, "data_dir": pinned.rsplit("/data/public", 1)[0]}
+        )
+        assert err2 is None and grant2 == pinned
+        grant3, err3 = td.resolve_worker_data_grant(
+            registry, {"task_id": task_id, "data_dir": pinned}
+        )
+        assert err3 is None and grant3 == pinned
+
+
+def test_resolve_worker_data_grant_fails_closed():
+    registry = td.EXTERNAL_EVALUATOR_REGISTRY
+    assert registry is not None
+    # Unknown task: no grant.
+    grant, err = td.resolve_worker_data_grant(registry, {"task_id": "evil_task"})
+    assert grant is None and err == "data_grant_unavailable"
+    # Candidate-declared data_dir disagreeing with the pinned mapping.
+    grant, err = td.resolve_worker_data_grant(
+        registry, {"task_id": "hello_synth", "data_dir": "/mnt/rsi_data/comparison/banknote"}
+    )
+    assert grant is None and err == "data_grant_source_mismatch"
+    # Traversal in the declared path never matches the pinned grant.
+    grant, err = td.resolve_worker_data_grant(
+        registry, {"task_id": "hello_synth", "data_dir": "/mnt/rsi_data/hello_synth/../hello_synth"}
+    )
+    assert grant is None and err == "data_grant_source_mismatch"
+    # Candidate-supplied environment cannot redirect the grant either.
+    grant, err = td.resolve_worker_data_grant(
+        registry,
+        {"task_id": "hello_synth", "environment": {"DATA_DIR": "/mnt/rsi_data/comparison/wdbc"}},
+    )
+    assert grant is None and err == "data_grant_source_mismatch"
+    # No registry at all: fail closed.
+    grant, err = td.resolve_worker_data_grant(None, {"task_id": "hello_synth"})
+    assert grant is None and err == "data_grant_unavailable"
+
+
+def test_execute_job_with_mismatched_data_dir_never_executes(scratch_harness):
+    job = _make_job(scratch_harness["tmp"], _evidence_for(CANDIDATE_CODE))
+    job["data_dir"] = "/mnt/rsi_data/comparison/banknote"  # cross-task alias attempt
+    _stage_bytes(scratch_harness, CANDIDATE_CODE)
+    td.execute_job(scratch_harness["redis"], scratch_harness["conn"], "http://worker.invalid:8080", job)
+    status, result_raw = scratch_harness["conn"].updates[-1][0], scratch_harness["conn"].updates[-1][1]
+    result = json.loads(result_raw)
+    assert status == "failed"
+    assert result["result"] == td.RESULT_DATA_GRANT
+    assert "data_grant_source_mismatch" in (result.get("run_log") or "")
+    # Only the trusted stage command ran; the candidate exec never did.
+    assert len(scratch_harness["commands"]) == 1
+    assert scratch_harness["exec_calls"][0]["exec_class"] == "staging"
+
+
+def test_execute_job_with_unregistered_task_never_executes(scratch_harness):
+    job = _make_job(scratch_harness["tmp"], _evidence_for(CANDIDATE_CODE))
+    job["task_id"] = "unregistered_task"
+    job["data_dir"] = "/mnt/rsi_data/unregistered_task"
+    _stage_bytes(scratch_harness, CANDIDATE_CODE)
+    td.execute_job(scratch_harness["redis"], scratch_harness["conn"], "http://worker.invalid:8080", job)
+    status, result_raw = scratch_harness["conn"].updates[-1][0], scratch_harness["conn"].updates[-1][1]
+    result = json.loads(result_raw)
+    assert status == "failed"
+    assert result["result"] == td.RESULT_DATA_GRANT
+    assert "data_grant_unavailable" in (result.get("run_log") or "")
+    assert len(scratch_harness["commands"]) == 1
+
+
+def test_exec_command_forwards_read_grants(monkeypatch):
+    captured: list[dict] = []
+
+    def fake_post(url, json=None, timeout=None, headers=None):
+        captured.append(json)
+        return _FakeResponse({"data": {"session_id": "s-1", "status": "running"}})
+
+    monkeypatch.setattr(td.httpx, "post", fake_post)
+    monkeypatch.setattr(td, "WORKER_CONTROL_KEY", "k" * 32)
+    controller = td.SandboxHTTPController("http://worker.invalid:8080")
+    controller.exec_command(command="true", exec_dir=None, exec_class="candidate",
+                            job_root="/scratch/job", read_grants=["/mnt/rsi_data/a/data/public"])
+    assert captured[0]["read_grants"] == ["/mnt/rsi_data/a/data/public"]
+    controller.exec_command(command="true", exec_dir=None)
+    assert "read_grants" not in captured[1]

@@ -243,11 +243,20 @@ def main() -> int:
     input_readonly = True
     public_data_readonly = False
     bad_mounts = []
+    # EXP-003: the sklearn-bundled labeled WDBC CSV (both interpreter
+    # copies) must be masked with a read-only /dev/null bind mount.
+    masked_dataset_dests = {
+        "/usr/local/lib/python3.10/dist-packages/sklearn/datasets/data/breast_cancer.csv",
+        "/opt/python3.11/lib/python3.11/site-packages/sklearn/datasets/data/breast_cancer.csv",
+    }
+    masked_seen: dict[str, bool] = {}
     for mount in mounts:
         dest = mount.get("Destination") or ""
         source = mount.get("Source") or ""
         rw = bool(mount.get("RW"))
-        if dest == "/mnt/local_sandbox_workdir":
+        if dest in masked_dataset_dests:
+            masked_seen[dest] = (not rw) and source == "/dev/null"
+        elif dest == "/mnt/local_sandbox_workdir":
             scratch_writable = scratch_writable or rw
         elif dest.startswith("/mnt/rsi_storage"):
             input_readonly = input_readonly and (not rw)
@@ -266,6 +275,11 @@ def main() -> int:
     check("worker: scratch mount writable", scratch_writable)
     check("worker: public input + entrypoint + trampoline + control key read-only", input_readonly)
     check("worker: public task data mounted read-only", public_data_readonly)
+    check(
+        "worker: bundled labeled WDBC assets masked via /dev/null (both copies)",
+        masked_seen == {dest: True for dest in masked_dataset_dests},
+        f"masked={masked_seen}",
+    )
     check("worker: no unexpected mounts", not bad_mounts, "; ".join(bad_mounts))
     check(
         "worker: control key mounted",
@@ -279,6 +293,17 @@ def main() -> int:
         "worker: evaluator tree not reachable via any mount (US-005 plan check)",
         not denials,
         "; ".join(f"{d.reason}:{d.source}" for d in denials),
+    )
+    # EXP-003: the sealed comparison tree (raw archives, final/refit data)
+    # must likewise be unreachable via any worker mount source.
+    sealed_denials = validate_worker_mount_plan(
+        [m.get("Source") or "" for m in mounts],
+        evaluator_root=REPO_ROOT / "research" / "comparison" / "sealed",
+    )
+    check(
+        "worker: sealed comparison tree not reachable via any mount",
+        not sealed_denials,
+        "; ".join(f"{d.reason}:{d.source}" for d in sealed_denials),
     )
 
     # 3. networks

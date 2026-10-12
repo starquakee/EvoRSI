@@ -1,0 +1,119 @@
+{
+  "schema": "amended-results-redacted-export.v1",
+  "files": [
+    {
+      "source": ".runtime/final-only-amendment-report/results-27-cells.csv",
+      "export": "results-27-cells.csv",
+      "original_sha256": "faa7647753ef135bbc9282dcf136f4241afb51fb5cd66fead106303de0a0148a",
+      "export_sha256": "faa7647753ef135bbc9282dcf136f4241afb51fb5cd66fead106303de0a0148a"
+    },
+    {
+      "source": ".runtime/final-only-amendment-report/report.json",
+      "export": "report.json",
+      "original_sha256": "c29954ca481aacca8f951e18b876adaccb683de09f9bd6b3e20233032e106ec7",
+      "export_sha256": "c29954ca481aacca8f951e18b876adaccb683de09f9bd6b3e20233032e106ec7"
+    },
+    {
+      "source": ".runtime/final-only-amendment-report/plots/final-accuracy.png",
+      "export": "plots/final-accuracy.png",
+      "original_sha256": "91a6d3db459be1f0a0081147aace0168aa412c2e616ae34ffbd0c9278d628d47",
+      "export_sha256": "91a6d3db459be1f0a0081147aace0168aa412c2e616ae34ffbd0c9278d628d47"
+    },
+    {
+      "source": ".runtime/final-only-amendment-report/plots/paired-differences.png",
+      "export": "plots/paired-differences.png",
+      "original_sha256": "4d31b9deca173bf47c82ca74c121e866006bde094499eed117808835e16279be",
+      "export_sha256": "4d31b9deca173bf47c82ca74c121e866006bde094499eed117808835e16279be"
+    },
+    {
+      "source": ".runtime/final-only-amendment-001/authorization.json",
+      "export": "stage/authorization.json",
+      "original_sha256": "df4162a678879d29385801398da7e9059fdc6fc484923a832c76994a7d8e38a0",
+      "export_sha256": "df4162a678879d29385801398da7e9059fdc6fc484923a832c76994a7d8e38a0"
+    },
+    {
+      "source": ".runtime/final-only-amendment-001/launch.json",
+      "export": "stage/launch.json",
+      "original_sha256": "ad5279950bd941211139021d5824dbc8d86c000c0c621670fc33a5fcf5a819ea",
+      "export_sha256": "ad5279950bd941211139021d5824dbc8d86c000c0c621670fc33a5fcf5a819ea"
+    },
+    {
+      "source": ".runtime/final-only-amendment-001/outcome.json",
+      "export": "stage/outcome.json",
+      "original_sha256": "20a1698bd8fb6f01de5a9de0e5a120c1e878f128aab83db0fe06e4687955a6d1",
+      "export_sha256": "20a1698bd8fb6f01de5a9de0e5a120c1e878f128aab83db0fe06e4687955a6d1"
+    },
+    {
+      "source": ".runtime/final-only-amendment-001/preflight.json",
+      "export": "stage/preflight.json",
+      "original_sha256": "6df78821eb48916c2278206464539410e8cff2a6f13a6eb34c091ebf4d1b9396",
+      "export_sha256": "6df78821eb48916c2278206464539410e8cff2a6f13a6eb34c091ebf4d1b9396"
+    },
+    {
+      "source": "reports/istratde-pilot-20261012/canonical/audit.json",
+      "export": "provenance/original-canonical-FAIL.json",
+      "original_sha256": "f6a0c892e16e959544b02fd4383cd85bc07b7f92988159ee9a9492f61d779fcf",
+      "export_sha256": "f6a0c892e16e959544b02fd4383cd85bc07b7f92988159ee9a9492f61d779fcf"
+    },
+    {
+      "source": "reports/istratde-supplemental-audit-20261012/audit.json",
+      "export": "provenance/supplemental-audit.json",
+      "original_sha256": "19dc2931651ee9830f1a348a1b0adc1233d3146d61f99f2bfc00444a9f944dbe",
+      "export_sha256": "19dc2931651ee9830f1a348a1b0adc1233d3146d61f99f2bfc00444a9f944dbe"
+    },
+    {
+      "source": "reports/istratde-supplemental-audit-20261012/event-replay.json",
+      "export": "provenance/original-budget-event-replay.json",
+      "original_sha256": "c0572ff4c2c3c5f7e036e77f702060db6a8b537790445dbfcc1bda9cbce03054",
+      "export_sha256": "c0572ff4c2c3c5f7e036e77f702060db6a8b537790445dbfcc1bda9cbce03054"
+    },
+    {
+      "source": "reports/istratde-supplemental-audit-20261012/final-only-stage-proposal.json",
+      "export": "provenance/approved-proposal-history.json",
+      "original_sha256": "ab6361d0b351fc1d5a7011bf4f0eaff229a2525be32c38238219ff5bf670eb5a",
+      "export_sha256": "ab6361d0b351fc1d5a7011bf4f0eaff229a2525be32c38238219ff5bf670eb5a"
+    },
+    {
+      "source": "reports/istratde-pilot-20261012/forensic/results-27-cells.csv",
+      "export": "search-costs-27-cells.csv",
+      "original_sha256": "7e03c936984eef123b26bd3c4dd80ad53825c10dcdde52ef7ff4d37199e33ad4",
+      "export_sha256": "7e03c936984eef123b26bd3c4dd80ad53825c10dcdde52ef7ff4d37199e33ad4"
+    },
+    {
+      "source": "reports/istratde-pilot-20261012/forensic/validation-cost-curves.csv",
+      "export": "validation-cost-curves.csv",
+      "original_sha256": "cdf5acdb2d548cc8bc17c36dec4f30a66971323978c8fa77c9f647e6de2ad913",
+      "export_sha256": "cdf5acdb2d548cc8bc17c36dec4f30a66971323978c8fa77c9f647e6de2ad913"
+    },
+    {
+      "source": "reports/istratde-pilot-20261012/forensic/plots/validation-vs-requests.png",
+      "export": "plots/validation-vs-requests.png",
+      "original_sha256": "6fbcf0ac9487ccfb315c48ef764adbf6e884bed2c2470795eea285401b6cf7ee",
+      "export_sha256": "6fbcf0ac9487ccfb315c48ef764adbf6e884bed2c2470795eea285401b6cf7ee"
+    },
+    {
+      "source": "reports/istratde-pilot-20261012/forensic/plots/validation-vs-tokens.png",
+      "export": "plots/validation-vs-tokens.png",
+      "original_sha256": "09334b000d2ec48f4d63fd0d84f48baf77e71f1d4913a07d730b026e9de26275",
+      "export_sha256": "09334b000d2ec48f4d63fd0d84f48baf77e71f1d4913a07d730b026e9de26275"
+    },
+    {
+      "source": "reports/istratde-pilot-20261012/frozen/protocol.md",
+      "export": "frozen/protocol.md",
+      "original_sha256": "dadc97e91ae5896505e4367f6fccb339fcc1b6c036e516ad95d94e0d25e60f14",
+      "export_sha256": "dadc97e91ae5896505e4367f6fccb339fcc1b6c036e516ad95d94e0d25e60f14"
+    },
+    {
+      "source": "reports/istratde-pilot-20261012/frozen/experiment-manifest.v1.json",
+      "export": "frozen/experiment-manifest.v1.json",
+      "original_sha256": "df8b742abb9e849e26e8f6b5bec28e5d12f29de3f58f4a2497cece4a7c89d095",
+      "export_sha256": "df8b742abb9e849e26e8f6b5bec28e5d12f29de3f58f4a2497cece4a7c89d095"
+    },
+    {
+      "source": "reports/istratde-pilot-20261012/frozen/data-manifest.v1.json",
+      "export": "frozen/data-manifest.v1.json",
+      "original_sha256": "b2666d2d839b50acfba86f44ea685b3f011e5c8f9e18073e57e3375acf3d3704",
+      "export_sha256": "b2666d2d839b50acfba86f44ea685b3f011e5c8f9e18073e57e3375acf3d3704"
+    }
+  ]
+}
