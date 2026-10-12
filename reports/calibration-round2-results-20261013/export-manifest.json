@@ -1,0 +1,16 @@
+{
+  "schema": "calibration-public-export.v1",
+  "files": {
+    "README.md": "4a9cf50762a039cc21beddd84ab42a22f7bdc8cc4b837573976296b017d94cd6",
+    "operator-behavior.csv": "8927f6918430a33d708991d279bf9b811a04b1ca7dad64a1b9aee2bc46a07ebc",
+    "protocol.json": "a67ce509deb4573158bdf9afeb1da63ccb82c5e0a5f0bb382ce8b1f1b93d61c4",
+    "report.json": "16a5d1d63e0e7c67469e7778d68342af908bb2dfc1551aa2457c69771955b2cc",
+    "schedule.json": "ee44780688e4376efcfb768d1d681807da369b2a81e6fd78b3fd34d86c8d6204",
+    "tools/report_calibration_round2.py": "a51ef191aabd05eafe5afad1ba00491768e0f89310833fd6bdf8212c90602413",
+    "trials-27.csv": "b87b671d174a32a0d45726d47d1d40e5a90279ccd310473ce1a50e6f1a7b1113",
+    "validation-repeatability.png": "79598a2f453e2dca4cb622fe84f8cf63f3c356fd6a7bb59f4f8dc7fa5820d7c1",
+    "verification.json": "747d92753d57325ce11b52ac713890502b27c057cfdff333e08cb791a56ac9d9"
+  },
+  "raw_runtime_or_credentials_exported": false,
+  "csv_line_endings": "LF; no cell values changed"
+}

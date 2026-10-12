@@ -1,8 +1,13 @@
 # Round two: validation repeatability diagnostic
 
 The user selected **three repetitions** on 2026-10-12: the `small` option below.
-Implementation and offline checks are being frozen for a separately supervised
-launch. The five-repeat draft is retained as a rejected alternative, not an
+The separately supervised run is complete: **27/27 trials, 166 model requests,
+371,394 tokens and 87.82 minutes**, with zero unknown usage and zero final-test
+evaluations. Independent checks matched all 162 scored validation predictions.
+The configuration variance fraction was **0.0840** and median pairwise rank
+correlation **0.1266**, below both predeclared 0.5 thresholds. See the
+[full results](../../reports/calibration-round2-results-20261013/README.md).
+This does not establish a stable configuration signal or algorithm superiority. The five-repeat draft is retained as a rejected alternative, not an
 authorization or a source of additional budget. Draft schedule files preserve
 their original preparation status; execution requires a separate exact-bound
 authorization, preflight receipt and supervisor review under the new runtime.

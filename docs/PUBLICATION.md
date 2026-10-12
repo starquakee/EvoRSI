@@ -1,7 +1,7 @@
 # Public source snapshot
 
 Updated on 2026-10-13 from local source commit
-`64adefe6a267cfdac8ace7889ce7f70fefa594d2` (frozen three-repeat calibration implementation). This update follows the existing public main history;
+`7a4bdb4626971950bfce9a07c3931bc5520ecef7` (completed calibration and redacted results). This update follows the existing public main history;
 the original local research history is preserved separately and is not pushed.
 The initial public root was created on 2026-10-09 because older local commits
 contained historical credentials already removed from current files.
@@ -47,8 +47,7 @@ fail closed. Cloning or publishing does not authorize a new experiment.
 
 The later three-task, three-seed comparison and its final-only amendment are
 now included as redacted evidence. No iStratDE advantage was demonstrated; the
-original strict audit remains FAIL. The next diagnostic is offline preparation
-with a pending budget choice. MetaDE integration remains future work.
+original strict audit remains FAIL. The follow-up three-repeat diagnostic is now complete, as documented below. MetaDE integration remains future work.
 
 ## Checks on the previous 2026-10-10 publication
 
@@ -98,8 +97,8 @@ The user selected the small diagnostic: nine configurations with three independe
 repetitions, 27 trials, 216 requests / 600,000 tokens / four hours. The five-repeat
 draft remains an unselected alternative. This update publishes the exact frozen
 Python/YAML implementation and the temporary-directory correction to the old
-missing-review test. The measurement run is in progress; no interim result is
-promoted as a stable effect.
+missing-review test. That implementation was published before the run completed. The final result
+publication below supersedes its in-progress status.
 
 The exact source commit passed 190 research/shared regression tests (one expected
 research-environment skip), plus the real Evo assembly test that covers all nine
@@ -118,3 +117,35 @@ The actual publication copy passed 50 offline calibration tests. Its final
 tracked-file audit checked 1,010 text files with zero secret findings and zero
 research-code host-path violations. All 14 synchronized Python/YAML files
 were compared byte-for-byte in the staged index against the frozen source.
+
+## 2026-10-13 completed calibration results
+
+The authorized schedule finished all 27 trials: 166 model requests, 371,394 tokens,
+87.82 minutes, and zero unknown usage. The source used for execution remains
+`64adefe6a267cfdac8ace7889ce7f70fefa594d2`; the latest source commit adds reports and
+completion documentation. It does not retroactively replace that execution ID.
+
+All 162 scored validation predictions were independently recomputed. Three
+candidate executions failed and one generated candidate had invalid Python and
+was not submitted; all associated model costs are retained. One separate fixed
+preflight probe used zero model calls. There were no final-test evaluations.
+
+The variance fraction (0.0840) and median rank correlation (0.1266) missed the
+predeclared exploratory thresholds (both 0.5). Least-squares and SciPy recomputations
+matched the frozen analyzer. No stable overall configuration signal or outer
+algorithm advantage is claimed. Three repetitions provide limited evidence.
+
+The new report bundle includes aggregate trial costs/scores, behavioral summaries,
+the frozen protocol/schedule, a visually checked repeatability plot, verification
+metadata, and a read-only report script. Its export manifest hashes the included
+files; CSV line endings are LF without changing cell values. Raw model messages,
+candidate programs, prediction rows, ledgers, real data files, and authorization
+receipts remain private. All 6,413 original comparison files, historic ledgers,
+the final-only stage and the legacy stack were preserved.
+
+Publication verification re-read all 27 CSV rows, reproduced the frozen analysis,
+reconciled 166 requests / 371,394 tokens, and matched all nine export-manifest
+hashes against both the working copy and staged files. Eleven synchronized files
+matched the local source commit byte-for-byte. The private ledger and outcome
+hashes remained unchanged. The final tracked-file audit scanned 1,019 text files
+with zero secret findings and zero research-code host-path violations.

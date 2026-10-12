@@ -21,7 +21,7 @@ research implementation. MetaDE sources are retained for future research.
 ## Current status
 
 **Research prototype. The amended comparison found no demonstrated iStratDE
-advantage; the separately authorized three-repeat diagnostic is now running.**
+advantage; the completed repeatability diagnostic did not meet its stability thresholds.**
 
 The comparison covers three tasks, three methods (fixed, random, iStratDE), and
 three search seeds: 27 cells and 216 independent inner searches. Search consumed
@@ -41,18 +41,26 @@ events and 864 parent selections. Parameter wiring matched the recorded settings
 short searches, nearly constant features and noisy/saturated validation feedback
 limited the effective search space.
 
-The proposed next round varies crossover probability and score weight across nine
-settings on frozen Spambase training/validation data. The user selected **three
-repetitions: 27 independent trials**, capped at **216 model requests, 600,000 tokens
-and 4 hours**. The new source-bound execution is in progress; there is no interim
-performance conclusion. Final-test feedback is excluded. A new atomic ledger,
-fresh trials and exclusive launch markers forbid retries, resuming or expansion.
-Search-only mounts and one fixed zero-model isolation probe passed before launch;
-the old runtime artifacts and fallback stack were verified unchanged.
+The follow-up Spambase diagnostic completed **nine configurations × three
+independent repetitions (27 trials)**, varying crossover probability and score
+weight on the frozen training/validation split. It used **166 model requests,
+371,394 tokens and 87.82 minutes**, within the approved ceilings of 216 requests,
+600,000 tokens and four hours. All usage was known. All **162 scored validation
+predictions** were independently recomputed; three execution failures and one
+invalid-Python candidate rejected before submission remained in the cost totals.
+
+The estimated configuration variance fraction was **0.0840** and median pairwise
+Spearman rank correlation **0.1266**. Both missed the predeclared 0.5 thresholds.
+This short-search setting did not demonstrate a stable overall configuration
+signal. The diagnostic does not compare outer algorithms or establish a best
+configuration. It made **zero final-test evaluations**. Original artifacts and
+historic ledgers stayed unchanged; the new stack was idle on completion.
+
 
 - [Amended results and limitations](reports/istratde-amended-results-20261012/README.md)
 - [Mechanism diagnosis](reports/istratde-mechanism-diagnosis-20261012/README.md)
 - [Preserved original incomplete report](reports/istratde-pilot-20261012/README.md)
+- [Completed repeatability results](reports/calibration-round2-results-20261013/README.md)
 - [Three-repeat protocol and controlled runner](research/calibration/README.md)
 - [Earlier bounded pipeline acceptance](reports/us009-round2-acceptance.md)
 

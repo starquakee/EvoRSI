@@ -1,0 +1,60 @@
+{
+  "schema": "calibration-delivery-verification.v1",
+  "execution_source_commit": "64adefe6a267cfdac8ace7889ce7f70fefa594d2",
+  "offline_checks": {
+    "schema": "calibration-offline-verification.v1",
+    "source_commit": "64adefe6a267cfdac8ace7889ce7f70fefa594d2",
+    "verdict": "PASS",
+    "checks": [
+      {
+        "name": "research-and-shared-tests",
+        "returncode": 0,
+        "elapsed_seconds": 20.30558753013611,
+        "output_sha256": "040ace61cedb4ee8582d9067242cbd26925dc4192f3063371147978ceec509e2",
+        "summary": "190 passed, 1 skipped in 20.14s"
+      },
+      {
+        "name": "real-solver-assembly",
+        "returncode": 0,
+        "elapsed_seconds": 3.4005072116851807,
+        "output_sha256": "57ee381064a85d156ac2401d02ea5678dc8d19dcbaa5a6012e94b6abbe209084",
+        "summary": "1 passed, 18 warnings in 2.76s"
+      },
+      {
+        "name": "type-check",
+        "returncode": 0,
+        "elapsed_seconds": 0.19182848930358887,
+        "output_sha256": "050c52a2b0c61e8b681ef5c485e0bc03340b8d55148e0acef27d744c8be42033",
+        "summary": "Success: no issues found in 7 source files"
+      },
+      {
+        "name": "secret-audit",
+        "returncode": 0,
+        "elapsed_seconds": 1.609177589416504,
+        "output_sha256": "f412fd13a2f36d9a560ae81ce59438844686d19fc9270dbc005d5f068a4d03ae",
+        "summary": "AUDIT OK"
+      },
+      {
+        "name": "diff-check",
+        "returncode": 0,
+        "elapsed_seconds": 0.0037534236907958984,
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "summary": "clean"
+      }
+    ],
+    "model_requests": 0,
+    "sandbox_jobs": 0
+  },
+  "preflight_verdict": "PASS",
+  "preflight_evidence_sha256": "32bf412993ab46ffd2fb6db44fff3fa6bdba3f03b7b8e2024d14c729de54d2d8",
+  "fixed_preflight_jobs": 1,
+  "fixed_preflight_model_requests": 0,
+  "completed_trials": 27,
+  "independently_rescored_predictions": 162,
+  "original_comparison_files_unchanged": 6413,
+  "private_ledger_sha256": "bff5ce9964a830d59e97e57c38f95d312d00125aa1e6ab9c64d412b97ed37044",
+  "private_outcome_sha256": "0025a092e74e0db0ea84c1fa71b8c0f09db8ad27d74ab6c6d1511844bd5323d7",
+  "visual_check": "Actual nine-configuration plot inspected: labels, repeat points, mean/SD and caption readable; no clipping.",
+  "model_requests_for_reporting": 0,
+  "sandbox_jobs_for_reporting": 0
+}
