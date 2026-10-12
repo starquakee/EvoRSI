@@ -1,7 +1,7 @@
 # Public source snapshot
 
-Updated on 2026-10-12 from local source commit
-`a9088058404e0042ea79ba247e4812d0e817b730` (reviewed comparison implementation plus tested offline calibration preparation). This update follows the existing public main history;
+Updated on 2026-10-13 from local source commit
+`64adefe6a267cfdac8ace7889ce7f70fefa594d2` (frozen three-repeat calibration implementation). This update follows the existing public main history;
 the original local research history is preserved separately and is not pushed.
 The initial public root was created on 2026-10-09 because older local commits
 contained historical credentials already removed from current files.
@@ -91,3 +91,30 @@ files** with zero secret findings and zero research-code host-path violations;
 the checkout contains 1,009 tracked files including report images. Dataset,
 runtime and private-authorization exclusions were checked separately. These
 checks are not a fresh-clone end-to-end experiment or live-stack validation.
+
+## 2026-10-13 calibration implementation update
+
+The user selected the small diagnostic: nine configurations with three independent
+repetitions, 27 trials, 216 requests / 600,000 tokens / four hours. The five-repeat
+draft remains an unselected alternative. This update publishes the exact frozen
+Python/YAML implementation and the temporary-directory correction to the old
+missing-review test. The measurement run is in progress; no interim result is
+promoted as a stable effect.
+
+The exact source commit passed 190 research/shared regression tests (one expected
+research-environment skip), plus the real Evo assembly test that covers all nine
+settings and resolves that skipped dependency-specific case. Seven source modules
+passed type checking; the source secret audit passed. The actual new-stack
+preflight passed with one fixed first-party isolation probe and zero model calls,
+verified empty final-data mounts, and preserved all 6,413 original comparison
+files plus historic ledgers and the final-only stage. The private manifest,
+authorization, supervisor review, runtime ledgers and live traces are excluded.
+
+Source and result publication does not import the original private Git history.
+Only the isolated live coordinator consumes the selected budget; publication
+checks make no model request or sandbox submission.
+
+The actual publication copy passed 50 offline calibration tests. Its final
+tracked-file audit checked 1,010 text files with zero secret findings and zero
+research-code host-path violations. All 14 synchronized Python/YAML files
+were compared byte-for-byte in the staged index against the frozen source.

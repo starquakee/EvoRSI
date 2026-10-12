@@ -21,7 +21,7 @@ research implementation. MetaDE sources are retained for future research.
 ## Current status
 
 **Research prototype. The amended comparison found no demonstrated iStratDE
-advantage; the next repeatability diagnostic is prepared offline only.**
+advantage; the separately authorized three-repeat diagnostic is now running.**
 
 The comparison covers three tasks, three methods (fixed, random, iStratDE), and
 three search seeds: 27 cells and 216 independent inner searches. Search consumed
@@ -42,14 +42,18 @@ short searches, nearly constant features and noisy/saturated validation feedback
 limited the effective search space.
 
 The proposed next round varies crossover probability and score weight across nine
-settings on frozen Spambase training/validation data. Three or five repetitions
-are drafted. **Budget selection is pending; no live calibration runner or new
-model experiment has been started.** Final-test feedback is excluded.
+settings on frozen Spambase training/validation data. The user selected **three
+repetitions: 27 independent trials**, capped at **216 model requests, 600,000 tokens
+and 4 hours**. The new source-bound execution is in progress; there is no interim
+performance conclusion. Final-test feedback is excluded. A new atomic ledger,
+fresh trials and exclusive launch markers forbid retries, resuming or expansion.
+Search-only mounts and one fixed zero-model isolation probe passed before launch;
+the old runtime artifacts and fallback stack were verified unchanged.
 
 - [Amended results and limitations](reports/istratde-amended-results-20261012/README.md)
 - [Mechanism diagnosis](reports/istratde-mechanism-diagnosis-20261012/README.md)
 - [Preserved original incomplete report](reports/istratde-pilot-20261012/README.md)
-- [Next-round draft and offline tests](research/calibration/README.md)
+- [Three-repeat protocol and controlled runner](research/calibration/README.md)
 - [Earlier bounded pipeline acceptance](reports/us009-round2-acceptance.md)
 
 The isolated research gateway remains 127.0.0.1:6581; the legacy stack is preserved.

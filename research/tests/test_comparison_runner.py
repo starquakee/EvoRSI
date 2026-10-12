@@ -162,13 +162,14 @@ def test_spec_config_index_out_of_range():
 def test_live_gate_refuses_before_any_activity(tmp_path):
     # EXP-007: the gate is wired; without the ignored supervisor review
     # every live attempt refuses BEFORE any ledger/auth/model activity.
+    # Isolate this absence test from preserved real experiment artifacts.
     with pytest.raises(ComparisonReviewRefused, match="comparison_review_absent"):
-        cr.check_comparison_review(REPO_ROOT)
+        cr.check_comparison_review(tmp_path)
     spec_path = tmp_path / "spec.json"
     spec_path.write_text(json.dumps(_spec().to_dict()), encoding="utf-8")
-    assert cr.main(["run", "--spec", str(spec_path), "--repo-root", str(REPO_ROOT)]) == 2
+    assert cr.main(["run", "--spec", str(spec_path), "--repo-root", str(tmp_path)]) == 2
     # Nothing live was created: no ledger, no review file, no result.
-    runtime = REPO_ROOT / ".runtime/comparison-istratde"
+    runtime = tmp_path / ".runtime/comparison-istratde"
     assert not (runtime / "comparison-ledger.json").exists()
     assert not (runtime / "supervisor-review.json").exists()
     assert not (tmp_path / "run-result.json").exists()
