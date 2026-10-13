@@ -1,7 +1,7 @@
 # Public source snapshot
 
 Updated on 2026-10-13 from local source commit
-`73a4b6275bfd67096588d387c5c0d4a24f904122` (offline noise diagnosis and shared-start draft). This update follows the existing public main history;
+`b1e3245796122845286a33c41172d9a92b987f6d` (bounded shared-start implementation). This update follows the existing public main history;
 the original local research history is preserved separately and is not pushed.
 The initial public root was created on 2026-10-09 because older local commits
 contained historical credentials already removed from current files.
@@ -171,3 +171,38 @@ is added. The original execution source remains `64adefe6a267cfdac8ace7889ce7f70
 The publication index matched all 11 synchronized source/report files byte-for-byte;
 all nine new export hashes were verified. The final audit scanned 1,028 tracked
 text files, finding zero secrets and zero research-code host-path violations.
+
+
+## 2026-10-13 shared-start implementation
+
+The user subsequently approved the separately proposed pilot: three seed pools,
+27 continuations, 174 total requests / 600,000 tokens / four hours. This update
+publishes its frozen implementation, empty-final overlay and offline regression
+tests. The original diagnostic report and draft remain immutable historical
+documents; their pre-approval status is superseded only for this new allocation.
+
+The new ledger charges pools once, binds seed bundles with immutable hashes,
+and enforces exact unit order plus independent pool/continuation caps. Import
+preserves nested metrics, debug ancestry and both initial population members,
+including unequal scores. Tests detected and resolved generic journal restoration
+dropping a lower-scoring seed and the collector rejecting a legitimate native
+recovery draft. The latter is counted as one of four new continuation main calls.
+
+Exact-source offline validation and native Evo simulations use fake generation
+and evaluation only. The private preflight, authorization, review, runtime
+ledgers, candidate programs and prediction rows are not published. Neither the
+publication nor unused prior budget permits an additional experiment. No private
+Git history is imported; new files are copied by reviewed source commit bytes.
+
+The frozen source passed 302 research/shared tests, with 11 dependency-specific
+skips in the research environment. The native Evo environment passed 23 tests,
+including all ten new seed/continuation integration cases skipped above; the
+remaining skipped case is unchanged round-two solver assembly, validated in its
+earlier source audit. Ten new source modules passed type checking. Secret,
+compose-configuration and diff checks passed.
+
+The actual publication copy passed 112 shared-start tests, with those ten native
+dependency cases skipped. All 24 synchronized files matched the frozen source
+byte-for-byte in the publication index. Its audit scanned 1,051 tracked text
+files and found zero secrets and zero research-code host-path violations.
+Publication validation made no model or sandbox request.

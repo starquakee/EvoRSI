@@ -2,7 +2,9 @@
 
 The subsequent [offline noise diagnosis](../../reports/calibration-noise-diagnosis-20261013/README.md)
 uses only these completed aggregate results. It proposes a separate shared-start
-pilot; that draft is not authorized and this runner cannot execute it.
+pilot. The user subsequently approved that separate allocation; its implementation
+is in [research/shared_start](../shared_start/README.md). This completed round-two
+runner cannot execute the new pilot or reuse its closed ledger.
 
 The user selected **three repetitions** on 2026-10-12: the `small` option below.
 The separately supervised run is complete: **27/27 trials, 166 model requests,

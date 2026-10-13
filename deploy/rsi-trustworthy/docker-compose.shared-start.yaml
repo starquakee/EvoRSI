@@ -1,0 +1,13 @@
+# Apply only to the existing rsi-trustworthy stack, while verified idle.
+# Prior final-publication artifacts stay untouched on the host.
+services:
+  dispatcher:
+    environment:
+      EVALUATOR_REGISTRY_PATH: /opt/rsi_repo/research/evaluator/registry.v1.json
+    volumes:
+      - ../../.runtime/shared-start-pilot/empty-final:/opt/rsi_final:ro
+  worker:
+    volumes:
+      - ../../.runtime/shared-start-pilot/empty-final/banknote/data/final:/mnt/rsi_data/comparison/banknote/data/final:ro
+      - ../../.runtime/shared-start-pilot/empty-final/wdbc/data/final:/mnt/rsi_data/comparison/wdbc/data/final:ro
+      - ../../.runtime/shared-start-pilot/empty-final/spambase/data/final:/mnt/rsi_data/comparison/spambase/data/final:ro
