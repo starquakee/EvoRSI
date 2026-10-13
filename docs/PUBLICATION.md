@@ -1,7 +1,7 @@
 # Public source snapshot
 
 Updated on 2026-10-13 from local source commit
-`7a4bdb4626971950bfce9a07c3931bc5520ecef7` (completed calibration and redacted results). This update follows the existing public main history;
+`73a4b6275bfd67096588d387c5c0d4a24f904122` (offline noise diagnosis and shared-start draft). This update follows the existing public main history;
 the original local research history is preserved separately and is not pushed.
 The initial public root was created on 2026-10-09 because older local commits
 contained historical credentials already removed from current files.
@@ -149,3 +149,25 @@ hashes against both the working copy and staged files. Eleven synchronized files
 matched the local source commit byte-for-byte. The private ledger and outcome
 hashes remained unchanged. The final tracked-file audit scanned 1,019 text files
 with zero secret findings and zero research-code host-path violations.
+
+## 2026-10-13 offline noise diagnosis
+
+The new bundle analyzes only the previously published 27 trial aggregates.
+It adds joined initial/final scores, an additive residual covariance decomposition,
+leave-one-repeat-out ranking diagnostics, a visually inspected plot, reproducible
+analysis code and a proposed shared-start schedule. There were zero new model
+requests, sandbox submissions or final evaluations. The shared-start proposal
+is not authorized, and the existing runner cannot execute it.
+
+Four synthetic statistical/boundary tests passed. Real-data decomposition matched
+an independent least-squares projection; prior rank correlations and residual
+variance matched the frozen round-two analysis. All nine original export hashes
+matched in both checkouts, and private round-two ledger/outcome hashes were
+unchanged. The proposed schedule covers three pools and 27 continuations, with
+174 requests at most (114 main and 60 debug). These are proposed ceilings, not a
+reopened or extended allocation. No runtime, raw candidate or credential data
+is added. The original execution source remains `64adefe6a267cfdac8ace7889ce7f70fefa594d2`.
+
+The publication index matched all 11 synchronized source/report files byte-for-byte;
+all nine new export hashes were verified. The final audit scanned 1,028 tracked
+text files, finding zero secrets and zero research-code host-path violations.

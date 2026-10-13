@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "synthetic_tests_passed": 4,
+  "real_trials": 27,
+  "independent_least_squares_decomposition_matched": true,
+  "frozen_prior_correlations_and_residual_variance_matched": true,
+  "original_export_files_verified_in_both_checkouts": 9,
+  "private_round_two_ledger_and_outcome_hashes_unchanged": true,
+  "proposed_schedule_units_verified": 30,
+  "proposed_budget_requests": 174,
+  "proposed_main_requests": 114,
+  "proposed_debug_requests": 60,
+  "additional_live_calls": 0,
+  "plot_visually_checked": true,
+  "numpy_version": "2.5.3",
+  "scipy_version": "1.18.1"
+}

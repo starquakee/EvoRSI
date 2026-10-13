@@ -1,0 +1,87 @@
+{
+  "schema": "calibration-noise-diagnosis.v1",
+  "status": "retrospective_descriptive_only",
+  "observations": 27,
+  "configurations": 9,
+  "repetitions": 3,
+  "additional_model_requests": 0,
+  "additional_sandbox_jobs": 0,
+  "additional_final_evaluations": 0,
+  "scores": {
+    "mean_initial_accuracy": 0.9341249629629629,
+    "mean_final_accuracy": 0.9385677777777778,
+    "mean_gain_pp": 0.44428148148148333,
+    "positive_gain_trials": 22,
+    "unchanged_trials": 5,
+    "initial_sample_sd_pp": 0.24245179930401772,
+    "final_sample_sd_pp": 0.3172125328949681,
+    "initial_final_pearson": 0.2160667831188283
+  },
+  "additive_residual_decomposition": {
+    "degrees_of_freedom": 16,
+    "units": "squared percentage points",
+    "initial_variance_pp2": 0.05527421453703776,
+    "gain_variance_pp2": 0.09838130092592581,
+    "twice_initial_gain_covariance_pp2": -0.06116415143518575,
+    "final_variance_pp2": 0.09249136402777784,
+    "identity_abs_error_pp2": 1.6940658945086007e-17,
+    "initial_residual_rms_pp": 0.2351046884624757,
+    "gain_residual_rms_pp": 0.3136579361755825,
+    "final_residual_rms_pp": 0.3041239287326432,
+    "interpretation": "Algebraic decomposition, not independent or causal noise shares. Gain contains minus initial score; covariance includes mathematical coupling. Residual combines stochastic variation, interaction and unmodeled effects."
+  },
+  "ranking": {
+    "single_repeat_pairwise_spearman": [
+      0.08156384655241421,
+      0.2802140658283879,
+      0.12658340529445694
+    ],
+    "two_repeat_mean_vs_held_out": [
+      {
+        "held_out_repeat": 1,
+        "spearman_two_repeat_mean_vs_held_out": 0.10302801669778637,
+        "selected_configs_including_ties": [
+          "c00"
+        ],
+        "held_out_selected_mean_accuracy": 0.93675,
+        "held_out_gap_to_best_pp": 0.5453000000000041
+      },
+      {
+        "held_out_repeat": 2,
+        "spearman_two_repeat_mean_vs_held_out": 0.13865546218487398,
+        "selected_configs_including_ties": [
+          "c03"
+        ],
+        "held_out_selected_mean_accuracy": 0.941112,
+        "held_out_gap_to_best_pp": 0.21810000000000995
+      },
+      {
+        "held_out_repeat": 3,
+        "spearman_two_repeat_mean_vs_held_out": 0.18488047749952397,
+        "selected_configs_including_ties": [
+          "c03"
+        ],
+        "held_out_selected_mean_accuracy": 0.943293,
+        "held_out_gap_to_best_pp": 0.10909999999999531
+      }
+    ],
+    "median_held_out_spearman": 0.13865546218487398,
+    "interpretation": "Only three overlapping folds over nine configurations. Held-out means repetition, not unseen data; every score uses the same validation split. No confidence interval, population reliability or algorithm advantage claim."
+  },
+  "provenance": {
+    "input_directory": "calibration-round2-results-20261013",
+    "input_sha256": {
+      "trials-27.csv": "b87b671d174a32a0d45726d47d1d40e5a90279ccd310473ce1a50e6f1a7b1113",
+      "operator-behavior.csv": "8927f6918430a33d708991d279bf9b811a04b1ca7dad64a1b9aee2bc46a07ebc",
+      "report.json": "16a5d1d63e0e7c67469e7778d68342af908bb2dfc1551aa2457c69771955b2cc",
+      "schedule.json": "ee44780688e4376efcfb768d1d681807da369b2a81e6fd78b3fd34d86c8d6204",
+      "export-manifest.json": "9325306caa6acd7da3890d293a5c22872e86b7b87bce257015477bea872bb0a0"
+    },
+    "original_execution_commit": "64adefe6a267cfdac8ace7889ce7f70fefa594d2",
+    "original_cost": {
+      "requests": 166,
+      "tokens": 371394
+    },
+    "verification_scope": "Published aggregate bytes and consistency; does not reauthenticate private predictions."
+  }
+}

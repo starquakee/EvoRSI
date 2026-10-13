@@ -56,11 +56,17 @@ signal. The diagnostic does not compare outer algorithms or establish a best
 configuration. It made **zero final-test evaluations**. Original artifacts and
 historic ledgers stayed unchanged; the new stack was idle on completion.
 
+The subsequent zero-call noise diagnosis found weak agreement between a
+two-repeat average and the excluded repetition (rank correlations 0.1030,
+0.1387 and 0.1849). Starting scores alone also weakly tracked final scores.
+A proposed shared-start pilot controls the initial candidate pool; its budget
+and implementation are pending, and no new experiment has been launched.
 
 - [Amended results and limitations](reports/istratde-amended-results-20261012/README.md)
 - [Mechanism diagnosis](reports/istratde-mechanism-diagnosis-20261012/README.md)
 - [Preserved original incomplete report](reports/istratde-pilot-20261012/README.md)
 - [Completed repeatability results](reports/calibration-round2-results-20261013/README.md)
+- [Noise diagnosis and proposed shared-start pilot](reports/calibration-noise-diagnosis-20261013/README.md)
 - [Three-repeat protocol and controlled runner](research/calibration/README.md)
 - [Earlier bounded pipeline acceptance](reports/us009-round2-acceptance.md)
 

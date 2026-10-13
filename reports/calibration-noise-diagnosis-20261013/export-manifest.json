@@ -1,0 +1,14 @@
+{
+  "schema": "calibration-noise-export.v1",
+  "files": {
+    "README.md": "d131b8a4a661cc3fb5e53e3a6ed7fc4d33e9ff0bfc506c7d4f1860790ba3c8da",
+    "analysis.json": "e82150926487d946d4418dcbdc41488c24c917b1218893b9741b9b1cf68b30ad",
+    "joined-trials.csv": "afb97bc96eead4087134b6f952876748d6ad31e5773168537e6510cfbe6ebbce",
+    "noise-diagnosis.png": "c160a80b6a27269cb5eab6596eaca6a90aa98af8e34c22cdca1b7dff5af7fc71",
+    "shared-start-plan-draft.json": "c633c56c2536e12a6957dc81161e3f20bff3a11b7a87569f49a36d409e117ff4",
+    "tools/analyze_noise.py": "c5d6adcc996d898050dcb893632c7f78492dbfc9d55d7d8ddddef9bbaea06c62",
+    "tools/plan_shared_start.py": "88819dfc31d08e027e22d475e7a40f158b9238bfefa822fdbeaf35512dedb782",
+    "tools/test_analyze_noise.py": "1e332eae1857693c0cfca67a416768c31faa2d80d9719ba9c9775895b1593ccd",
+    "verification.json": "b565e17f7e7ced52a5e4c49860662cb60e0d419f53ca9c99b46bd555600d66f3"
+  }
+}

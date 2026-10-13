@@ -1,5 +1,9 @@
 # Round two: validation repeatability diagnostic
 
+The subsequent [offline noise diagnosis](../../reports/calibration-noise-diagnosis-20261013/README.md)
+uses only these completed aggregate results. It proposes a separate shared-start
+pilot; that draft is not authorized and this runner cannot execute it.
+
 The user selected **three repetitions** on 2026-10-12: the `small` option below.
 The separately supervised run is complete: **27/27 trials, 166 model requests,
 371,394 tokens and 87.82 minutes**, with zero unknown usage and zero final-test
