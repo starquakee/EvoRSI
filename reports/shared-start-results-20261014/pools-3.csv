@@ -1,0 +1,4 @@
+trial_id,kind,pool_id,block,position,config_id,inner_seed,crossover_prob,score_weight,delta_weight,novelty_weight,max_debug_depth,status,validation_accuracy,requests,charged_tokens,reason,main_requests,debug_requests,independently_verified,pool_baseline_accuracy,gain_from_pool_pp
+b00-pool,fresh_seed_pool,b00-pool,1,1,c04,2675261934,0.5,1.0,0.4,0.25,1,completed,0.932388,2,2738,completed,2,0,True,0.932388,
+b01-pool,fresh_seed_pool,b01-pool,2,11,c04,4247893452,0.5,1.0,0.4,0.25,1,completed,0.934569,2,2908,completed,2,0,True,0.934569,
+b02-pool,fresh_seed_pool,b02-pool,3,21,c04,2889346271,0.5,1.0,0.4,0.25,1,completed,0.934569,2,2685,completed,2,0,True,0.934569,

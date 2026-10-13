@@ -1,0 +1,51 @@
+{
+  "approved_plan_sha256": "c633c56c2536e12a6957dc81161e3f20bff3a11b7a87569f49a36d409e117ff4",
+  "budget_extension": false,
+  "candidate_cache_between_continuations": false,
+  "continuation_trials": 27,
+  "data_phase": "validation",
+  "fresh_seed_pools": 3,
+  "global_limits": {
+    "max_elapsed_seconds": 14400,
+    "max_requests": 174,
+    "max_tokens": 600000
+  },
+  "job_timeout_seconds": 600,
+  "model_profile": {
+    "allowed_openai_params": [
+      "reasoning_effort"
+    ],
+    "base_url": "https://api.kimi.com/coding/v1",
+    "max_output_tokens": 8192,
+    "model_id": "k3",
+    "reasoning_effort": "low",
+    "stream": true,
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "transport_retries": 0
+  },
+  "new_final_scoring": false,
+  "plan_identity": "8d992e5b29171a11290bbf03484b0d11cef47925142a1747bc639ecbe8546a29",
+  "repeats": 3,
+  "retry_or_resume": false,
+  "schema": "spambase-shared-start-pilot.v1",
+  "shared_seed_candidates_per_block": 2,
+  "task": "spambase",
+  "trial_limits": {
+    "continuation": {
+      "max_debug_requests": 2,
+      "max_elapsed_seconds": 1800,
+      "max_main_requests": 4,
+      "max_requests": 6,
+      "max_tokens": 40000
+    },
+    "fresh_seed_pool": {
+      "max_debug_requests": 2,
+      "max_elapsed_seconds": 900,
+      "max_main_requests": 2,
+      "max_requests": 4,
+      "max_tokens": 20000
+    }
+  },
+  "trials": 30
+}

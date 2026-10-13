@@ -21,7 +21,7 @@ research implementation. MetaDE sources are retained for future research.
 ## Current status
 
 **Research prototype. The amended comparison found no demonstrated iStratDE
-advantage; the completed repeatability diagnostic did not meet its stability thresholds.**
+advantage; the shared-start pilot did not demonstrate stable configuration rankings.**
 
 The comparison covers three tasks, three methods (fixed, random, iStratDE), and
 three search seeds: 27 cells and 216 independent inner searches. Search consumed
@@ -59,15 +59,16 @@ historic ledgers stayed unchanged; the new stack was idle on completion.
 The subsequent zero-call noise diagnosis found weak agreement between a
 two-repeat average and the excluded repetition (rank correlations 0.1030,
 0.1387 and 0.1849). Starting scores alone also weakly tracked final scores.
-The user approved a separate shared-start pilot: three fresh initial pools and
-27 continuations, capped at 174 requests / 600,000 tokens / four hours. The
-implementation is complete and separately gated; this source publication
-does not claim an experimental result or reopen the completed calibration.
+The shared-start pilot ended with status **completed**: **3/3 pools and 27/27 continuations**. It used **115 requests, 291,975 tokens and 90.78 minutes**, within the separately approved ceilings of 174 requests / 600,000 tokens / four hours. Pool costs were charged once.
+
+The configuration variance fraction was **0.0000** and median pairwise rank correlation **-0.4550**; the pilot did not demonstrate stable configuration rankings. The comparison with the previous independent-start calibration is descriptive because the starting design and main-request budget differ. There were zero final-test evaluations and no outer-algorithm comparison.
+
 
 - [Amended results and limitations](reports/istratde-amended-results-20261012/README.md)
 - [Mechanism diagnosis](reports/istratde-mechanism-diagnosis-20261012/README.md)
 - [Preserved original incomplete report](reports/istratde-pilot-20261012/README.md)
 - [Completed repeatability results](reports/calibration-round2-results-20261013/README.md)
+- [Shared-start pilot results and audit](reports/shared-start-results-20261014/README.md)
 - [Shared-start pilot implementation and approved limits](research/shared_start/README.md)
 - [Noise diagnosis and proposed shared-start pilot](reports/calibration-noise-diagnosis-20261013/README.md)
 - [Three-repeat protocol and controlled runner](research/calibration/README.md)

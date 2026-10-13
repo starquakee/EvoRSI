@@ -1,0 +1,18 @@
+{
+  "schema": "shared-start-public-export.v1",
+  "files": {
+    "README.md": "1d495b6dac1fad570d8c914c74e2cd8dc94647f752415e11d31c88d58724f913",
+    "continuations-27.csv": "50668788c8752900179e0dd8d235621c46db44cd29c4307050d006661f440304",
+    "historical-descriptive-comparison.png": "0edffbe55ad3d37077a6cadf3ade293f47c7a0bf628dc66b5d4c86bce256f729",
+    "operator-behavior.csv": "71e0284b026dee93acefe34c03c992922060262c40f3f1c945b282ca25dd4e63",
+    "pools-3.csv": "17e025b60d1c0f3be4d244e21531a155771228c5ccebbf1da87964804958b2c7",
+    "protocol.json": "d4b0f91dc7535ce089a16330c0c4a265e28e9dd1200722014497b8a8b229f75b",
+    "report.json": "4fef9b13ab3ad01651432527cbff93ac2b72a8a4005ed7954d15114644bc47d9",
+    "schedule.json": "84de03b26be01125912567ba89df21b5fbebcb31551b2a297c465d17fb09e7c0",
+    "shared-start-blocks-and-gains.png": "50a00efc0b26a4d352e906331d9f8e60d82b129562ba30149a28bb163d09b448",
+    "tools/report_shared_start.py": "bd76e74149110c156b8c2f06dcb245f6c61d4bf94c1ab00bf2a5958c5ddda8d7",
+    "units-30.csv": "81a2f099d3d6460ddec00e6e86609de6bca1895cd8200e982c685bcaac9fb62e",
+    "verification.json": "1a60558733f3c9d657884e57f464e20d8bb9d2d86daeeb87c6bb8ba8d3948a30"
+  },
+  "raw_runtime_or_credentials_exported": false
+}

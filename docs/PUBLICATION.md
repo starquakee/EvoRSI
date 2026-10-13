@@ -1,7 +1,7 @@
 # Public source snapshot
 
-Updated on 2026-10-13 from local source commit
-`b1e3245796122845286a33c41172d9a92b987f6d` (bounded shared-start implementation). This update follows the existing public main history;
+Updated on 2026-10-14 from local source commit
+`300c953e42795c4311dc85eb49920e7b23f45696` (shared-start results and independent audit). This update follows the existing public main history;
 the original local research history is preserved separately and is not pushed.
 The initial public root was created on 2026-10-09 because older local commits
 contained historical credentials already removed from current files.
@@ -206,3 +206,34 @@ dependency cases skipped. All 24 synchronized files matched the frozen source
 byte-for-byte in the publication index. Its audit scanned 1,051 tracked text
 files and found zero secrets and zero research-code host-path violations.
 Publication validation made no model or sandbox request.
+
+
+## 2026-10-14 shared-start result publication
+
+The allocation ended with status completed: 3/3 pools,
+27/27 continuations, 115 requests,
+291,975 tokens and 90.78 minutes.
+The execution source remains `b1e3245796122845286a33c41172d9a92b987f6d`; the latest source adds aggregates and
+completion documentation without changing the frozen runner.
+
+Independent post-run collection rechecked all 30 verified units,
+114 unique fresh prediction snapshots, pool seals,
+imported candidate populations, operator behavior and global/per-unit costs.
+Pool costs are counted once; the 27 import re-audits are
+not fresh sandbox jobs. The original 6,413 comparison files and 831 completed
+calibration files, historic ledgers and final-only stage remained unchanged.
+No reporting-time model or sandbox request was made.
+
+The report includes aggregate CSVs, exact protocol/schedule, independently checked
+statistics, two visually inspected plots, verification metadata and a report tool.
+Raw ledgers, requests, candidate programs, prediction rows, task data and private
+authorization receipts are excluded. The old diagnostic report and its draft
+remain unchanged. Historical stability comparisons are descriptive; no causal
+noise-reduction, final-test generalization or outer-algorithm advantage is claimed.
+
+Publication checks matched all 12 export hashes in the working copy and index,
+all 14 synchronized files against the source commit, and all 18 historical
+calibration/diagnosis export hashes. The 30 CSV rows reproduced the frozen
+analysis and reconciled 115 requests / 291,975 tokens. Private ledger and
+outcome hashes remained unchanged. The final audit scanned 1,062 tracked
+text files with zero secrets and zero research-code host-path violations.

@@ -1,5 +1,7 @@
 # Shared-start validation pilot
 
+The allocation ended with status **completed**: 3/3 pools and 27/27 continuations, 115 requests / 291,975 tokens / 90.78 minutes. See the [audited results](../../reports/shared-start-results-20261014/README.md). The ledger is closed to further execution; unused headroom is not a new allocation.
+
 The user approved this separate pilot after reviewing the
 [offline diagnosis and proposed budget](../../reports/calibration-noise-diagnosis-20261013/README.md).
 The selected allocation is **174 K3 requests / 600,000 tokens / four hours**.
